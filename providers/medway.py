@@ -17,11 +17,11 @@ from aioconsole import ainput
 from utils import *
 
 
-async def run_medway_process(CREDENTIALS_FILE, patient, shared_state):
+async def run_medway_process(patient, shared_state):
     async with async_playwright() as playwright:
         # Load credentials for the Medway process
         # Assuming load_credentials is a synchronous function, no await is needed
-        credentials = load_credentials(CREDENTIALS_FILE, "Medway")
+        credentials = load_credentials(shared_state, "Medway")
 
         # Print the status and loaded credentials
         print(f"Starting Medway process")
@@ -36,7 +36,7 @@ async def run_medway_process(CREDENTIALS_FILE, patient, shared_state):
         #print(f"Patient details are: {patient}")
 
         # Launch the browser and open a new page
-        browser = await playwright.chromium.launch(headless=False)
+        browser = await playwright.firefox.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
 
@@ -61,7 +61,7 @@ async def run_medway_process(CREDENTIALS_FILE, patient, shared_state):
         await page.get_by_label("Patient given name(s)").fill(patient["given_name"])
         await page.get_by_label("Patient given name(s)").press("Tab")
 
-        if patient['medicare_number'] != '':
+        if patient['medicare_number'] != None:
             medicare_field = page.get_by_placeholder("digit Medicare number")
             await medicare_field.fill(patient['medicare_number'][:10])
             await medicare_field.press("Tab")  # Move to the next field

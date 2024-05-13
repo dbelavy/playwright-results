@@ -20,11 +20,11 @@ from utils import *
 
 
 
-async def run_SNP_process(CREDENTIALS_FILE, patient, shared_state):
+async def run_SNP_process(patient, shared_state):
     async with async_playwright() as playwright:
         # Load credentials for the SNP process
         # Assuming load_credentials is a synchronous function, no await is needed
-        credentials = load_credentials(CREDENTIALS_FILE, "Sonic")
+        credentials = load_credentials(shared_state, "Sonic")
 
         # Print the status and loaded credentials
         print(f"Starting SNP process")
@@ -39,7 +39,7 @@ async def run_SNP_process(CREDENTIALS_FILE, patient, shared_state):
         #print(f"Patient details are: {patient}")
 
         # Launch the browser and open a new page
-        browser = await playwright.chromium.launch(headless=False)
+        browser = await playwright.firefox.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
 

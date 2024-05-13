@@ -23,19 +23,22 @@ async def process_inputs(input_queue, shared_state):
             user_input = input_queue.get()
             
             # Check for a code in the format Q###### or M######
-            match = re.match(r"^(Q|M)(\d{6})$", user_input, re.IGNORECASE)
+            match = re.match(r"^(Q|P|F)(\d{6})$", user_input, re.IGNORECASE)
             if match:
-                code_type = match.group(1).upper()  # Q or M
+                code_type = match.group(1).upper()  # Q or M or F
                 code_number = match.group(2)  # 6-digit number
                 if code_type == 'Q':
                     print(f"Received 2FA code for QScript: {code_number}")
                     shared_state["QScript_code"] = code_number
-                elif code_type == 'M':
-                    print(f"Received 2FA code for myHR: {code_number}")
-                    shared_state["myHR_code"] = code_number
+                elif code_type == 'P':
+                    print(f"Received 2FA code for PRODA: {code_number}")
+                    shared_state["PRODA_code"] = code_number
+                elif code_type == 'F':
+                    print(f"Received 2FA code for 4Cyte: {code_number}")
+                    shared_state["4Cyte_code"] = code_number
             
-            # Check for 'q' to quit
-            elif user_input.lower() == 'q':
+            # Check for 'x' to quit
+            elif user_input.lower() == 'x':
                 print("Received Quitting instruction...")
                 shared_state["exit"] = True
                 break
@@ -47,7 +50,7 @@ def input_thread(input_queue):
         try:
             user_input = input("Enter command: ")
             input_queue.put(user_input)
-            if user_input.lower() == 'q':
+            if user_input.lower() == 'x':
                 break
         except EOFError:
             print("EOF encountered in input stream.")
@@ -58,9 +61,10 @@ def input_thread(input_queue):
 
 
 # Function to load credentials from a JSON file
-def load_credentials(file_path, company):
+def load_credentials(shared_state, company):
     try:
         # Open and read the JSON file
+        file_path = shared_state["credentials_file"]
         with open(file_path, 'r') as file:
             data = json.load(file)
 

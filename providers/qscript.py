@@ -23,11 +23,11 @@ from utils import *
 
 
 
-async def run_QScript_process(CREDENTIALS_FILE, patient_details, shared_state):
+async def run_QScript_process(patient_details, shared_state):
     async with async_playwright() as playwright:        
         # Load credentials for the QScript process
         # Assuming load_credentials is a synchronous function, no await is needed
-        credentials = load_credentials(CREDENTIALS_FILE, "QScript")
+        credentials = load_credentials(shared_state, "QScript")
 
         # Print the status and loaded credentials
         print(f"Starting QScript process")
@@ -42,7 +42,7 @@ async def run_QScript_process(CREDENTIALS_FILE, patient_details, shared_state):
         # Print patient details
         print(f"Patient details are: {patient_details}")
     
-        browser = await playwright.chromium.launch(headless=False)
+        browser = await playwright.firefox.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
         await page.goto("https://hp.qscript.health.qld.gov.au/home")
@@ -101,12 +101,17 @@ async def run_QScript_process(CREDENTIALS_FILE, patient_details, shared_state):
         #here we have code to put in the PIN the first time if I haven't logged into QScript yet today. This doesn't work properly.
         #THIS SECTION DOESN'T WORK FOR THE PIN
         # await page.wait_for_load_state("networkidle")
-        await page.wait_for_selector("#pinCreate")
+        #old process
+        #await page.wait_for_selector("#pinCreate")
         #print("found #pinCreate")
-        await page.fill("#pinCreate", pin)
+        #await page.fill("#pinCreate", pin)
+        
         #print("Filled pincreate")
-        await page.get_by_role("button", name="OK").click()
+        #await page.get_by_role("button", name="OK").click()
         #print ("awaited button click")
+
+        await page.get_by_placeholder("Enter PIN").fill(pin)
+        await page.get_by_label("Save PIN and Log In").click()
 
         #if I have logged in, I jsut need to enter my PIN. I need to write this because I don't know what the workflow is. It seems Playwright doesn't keep any cookies so every login is a new episode. It doesn't remember the PIN.
 
