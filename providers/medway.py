@@ -25,15 +25,15 @@ async def run_medway_process(patient, shared_state):
 
         # Print the status and loaded credentials
         print(f"Starting Medway process")
-        #print(f"Credentials loaded are: {credentials}")
+        # print(f"Credentials loaded are: {credentials}")
 
         # Extract username and password from credentials
         username = credentials["user_name"]
         password = credentials["user_password"]
-        #print(f"Credentials are {username} and {password}")
-        
+        # print(f"Credentials are {username} and {password}")
+
         # Print patient details
-        #print(f"Patient details are: {patient}")
+        # print(f"Patient details are: {patient}")
 
         # Launch the browser and open a new page
         browser = await playwright.firefox.launch(headless=False)
@@ -44,10 +44,10 @@ async def run_medway_process(patient, shared_state):
         await page.goto("https://www.medway.com.au/login")
 
         # Fill in the login form using the loaded credentials
-        await page.get_by_placeholder("e.g. name@domain.com").click()
-        await page.get_by_placeholder("e.g. name@domain.com").fill(username)
-        await page.get_by_placeholder("Password").click()
-        await page.get_by_placeholder("Password").fill(password)
+        await page.get_by_label("Username").click()
+        await page.get_by_label("Username").fill(username)
+        await page.get_by_label("Password").click()
+        await page.get_by_label("Password").fill(password)
         await page.get_by_role("button", name="Log in").click()
 
         # Wait for the network activity to idle before proceeding
@@ -67,8 +67,9 @@ async def run_medway_process(patient, shared_state):
             await medicare_field.press("Tab")  # Move to the next field
 
         # Convert the patient's date of birth to the required format
-        converted_dob = convert_date_format(patient['dob'], "%d%m%Y", "%Y-%m-%d")
-        #print(converted_dob)
+        converted_dob = convert_date_format(
+            patient['dob'], "%d%m%Y", "%Y-%m-%d")
+        # print(converted_dob)
 
         # Fill in the date of birth field
         dob_field = page.get_by_role("textbox", name="Date of birth")
@@ -80,9 +81,9 @@ async def run_medway_process(patient, shared_state):
         print("Medway paused for interaction")
 
         while not shared_state.get("exit", False):
-            await asyncio.sleep(0.1)   
+            await asyncio.sleep(0.1)
         print("Medway received exit signal")
-  
+
         # Close the browser context and the browser
         await context.close()
         await browser.close()

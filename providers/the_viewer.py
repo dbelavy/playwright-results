@@ -44,17 +44,21 @@ async def run_QGov_Viewer_process(patient, shared_state):
         page = await context.new_page()
 
         # Navigate to the HPP login page
+
+        await page.goto("https://hpp.health.qld.gov.au/my.policy")
+
         await page.goto("https://hpp.health.qld.gov.au/")
 
         # Wait for the network activity to idle before proceeding
         await page.wait_for_load_state("networkidle")
+
+        await page.get_by_role("link", name="Log in").click()
 
         # Fill in the login form using the loaded credentials
 
         # Wait for the network activity to idle before proceeding
         await page.wait_for_load_state("networkidle")
 
-        await page.get_by_role("link", name="Login with QGov").click()
         await page.get_by_placeholder("Your email address").click()
         await page.get_by_placeholder("Your email address").fill(username)
         await page.get_by_label("Password").click()
@@ -85,6 +89,8 @@ async def run_QGov_Viewer_process(patient, shared_state):
         await page.get_by_placeholder("DD/MM/YYYY").click()
         await page.get_by_placeholder("DD/MM/YYYY").fill(converted_dob)
         await page.get_by_placeholder("DD/MM/YYYY").press("Tab")
+
+        await page.get_by_label("Patient Surname").click()
 
         await page.get_by_label("Patient Surname").fill(patient["family_name"])
         await page.get_by_role("button", name="Search").click()
@@ -123,8 +129,31 @@ async def run_QGov_Viewer_process(patient, shared_state):
         while not shared_state.get("exit", False):
             await asyncio.sleep(0.1)
 
+
+'''
+
+        # Handle popup using the expect_popup context manager
+        print("Waiting for popup")
+        try:
+            with page.expect_popup() as page1_info:
+                await page.get_by_role("link", name="The Viewer").click()
+            page1 = page1_info.value
+            await page1.wait_for_load_state()
+            # Perform necessary actions on the popup
+            # ...
+        except TimeoutError:
+            print("Timeout occurred while trying to click 'The Viewer' link.")
+
+        print("QGov The Viewer paused for interaction")
+
+        while not shared_state.get("exit", False):
+            await asyncio.sleep(0.1)
+
+
         print("QGov The Viewer received exit instruction")
 
         # Close the browser context and the browser
         await context.close()
         await browser.close()
+
+'''

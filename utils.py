@@ -6,6 +6,7 @@ import asyncio
 import re
 import queue
 
+import pyotp
 import threading
 
 from playwright.sync_api import Playwright, sync_playwright, expect
@@ -87,6 +88,31 @@ def load_credentials(shared_state, company):
         # If no errors, return the credentials
         #print('Credentials loaded for:', company, 'which are:', data[company])
         return data[company]
+
+
+
+# Function to generate a 2FA code from a provided TOTP secret
+def generate_2fa_code(totp_secret):
+    """
+    Generates a 2FA code using the provided TOTP secret.
+    
+    :param totp_secret: The TOTP secret key (base32-encoded) used to generate the OTP code.
+    :return: The current OTP code.
+    """
+    try:
+        # Create a TOTP object using the secret
+        totp = pyotp.TOTP(totp_secret)
+        
+        # Get the current OTP code
+        current_otp = totp.now()
+        
+        return current_otp
+    except Exception as e:
+        print(f"An error occurred while generating the 2FA code: {e}")
+        return None
+    
+
+
 
 
 def convert_gender(input_gender, output_format_required):

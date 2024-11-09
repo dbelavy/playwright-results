@@ -33,7 +33,8 @@ async def run_fourcyte_process(patient, shared_state):
         # Extract username and password from credentials
         username = credentials["user_name"]
         password = credentials["user_password"]
-        #print(f"Credentials are {username} and {password}")
+        two_fa_secret = credentials["totp_secret"]
+        print(f"Credentials are {username} and {password} and {two_fa_secret}")
         
         # Print patient details
         #print(f"Patient details are: {patient}")
@@ -63,15 +64,20 @@ async def run_fourcyte_process(patient, shared_state):
             #handle 2FA
 
 
-            print("Please enter 2FA for 4Cyte (Authenticator App) starting with F\n")
-            while not shared_state["4Cyte_code"]:
-            
-                await asyncio.sleep(1)  # Check for the 2FA code every second
+            #print("Please enter 2FA for 4Cyte (Authenticator App) starting with F\n")
+            #while not shared_state["4Cyte_code"]:
+            #
+            #   await asyncio.sleep(1)  # Check for the 2FA code every second
 
             # Once the 2FA code is available, use it
-            two_fa_code = shared_state["4Cyte_code"]
-            shared_state["4Cyte_code"]=None
-          
+            #two_fa_code = shared_state["4Cyte_code"]
+            #shared_state["4Cyte_code"]=None
+
+            # get 2FA code from PYOP
+            two_fa_code = generate_2fa_code(two_fa_secret)
+            print(f"Generated 2FA code: {two_fa_code}")
+
+
             #wait for PIN page to load
 
             #print ("await page.wait_for_load_state")
@@ -139,67 +145,3 @@ async def run_fourcyte_process(patient, shared_state):
 
 
 
-
-
-'''from playwright.sync_api import Playwright, sync_playwright, expect
-
-
-def run(playwright: Playwright) -> None:
-    browser = playwright.chromium.launch(headless=False)
-    context = browser.new_context()
-    page = context.new_page()
-    page.goto("https://www.4cyte.com.au/clinicians")
-    page.get_by_role("link", name="Web Results Portal").click()
-    with page.expect_popup() as page1_info:
-        page.get_by_label("Access results portal").click()
-    page1 = page1_info.value
-    page1.get_by_placeholder("Username").click()
-    page1.get_by_placeholder("Username").fill("233309DB")
-    page1.get_by_placeholder("Password").click()
-    page1.get_by_placeholder("Password").fill("Xd><ysYC{?**7+io")
-    page1.get_by_role("button", name="Log in").click()
-    page1.get_by_placeholder("-digit code").click()
-    page1.get_by_placeholder("-digit code").fill("314306")
-    page1.get_by_text("No").click()
-    page1.get_by_placeholder("Trusted device name (optional)").click()
-    page1.get_by_placeholder("Trusted device name (optional)").fill("Mac")
-    page1.get_by_role("button", name="Submit").click()
-    page1.get_by_role("button", name="Patients").click()
-    page1.get_by_role("link", name=" Break Glass").click()
-    page1.get_by_role("button", name="Accept").click()
-    page1.get_by_placeholder("Surname [space] First name").click()
-    page1.get_by_placeholder("Surname [space] First name").fill("foxwell kayla")
-    page1.get_by_placeholder("Birth Date (Required)").click()
-    page1.get_by_placeholder("Birth Date (Required)").fill("18022006")
-    page1.get_by_role("button", name="Search").click()
-    page1.get_by_role("button", name="OK").click()
-    page1.get_by_placeholder("Birth Date (Required)").click()
-    page1.get_by_placeholder("Birth Date (Required)").click()
-    page1.get_by_placeholder("Birth Date (Required)").click()
-    page1.get_by_placeholder("Birth Date (Required)").fill("18022006/")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowRight")
-    page1.get_by_placeholder("Birth Date (Required)").fill("18022006")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").fill("18/022006")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowRight")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowRight")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowRight")
-    page1.get_by_placeholder("Birth Date (Required)").press("ArrowLeft")
-    page1.get_by_placeholder("Birth Date (Required)").fill("18/02/2006")
-    page1.get_by_role("button", name="Search").click()
-    page1.get_by_role("cell", name="FOXWELL, Kayla Grace").click()
-
-    # ---------------------
-    context.close()
-    browser.close()
-
-
-with sync_playwright() as playwright:
-    run(playwright)
-'''
