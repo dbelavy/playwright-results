@@ -57,6 +57,12 @@ pip install aioconsole pynput playwright pyotp
 playwright install
 ```
 
+Sometimes you need to be more explicit
+```
+python -m playwright install
+python -m playwright install-deps
+```
+
 ## Configuration
 
 1. Create a credentials file by copying the template:
@@ -116,7 +122,8 @@ Enter task numbers separated by commas (e.g., "1,3,6")
   - Format: `Q######` for QScript (manual entry required)
   - Format: `P######` for PRODA
   - Format: `F######` for 4Cyte (now automated with pyotp - no manual entry needed)
-- Type 'x' to quit the application
+
+5. Type 'x' to quit the application
 
 ### Command Line Arguments
 
