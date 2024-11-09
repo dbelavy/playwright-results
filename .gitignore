@@ -6,3 +6,5 @@ venv/
 env/
 .env/
 .venv/
+providers/__pycache__/
+draft_scripts/node_modules/
