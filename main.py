@@ -26,6 +26,7 @@ from providers.snp_sonic import *
 from providers.myhealthrecord import *
 from providers.fourcyte import *
 from providers.meditrust import *
+from providers.imed import *
 from utils import *
 
 
@@ -72,6 +73,7 @@ async def main():
         5: run_myHealthRecord_process,
         6: run_mater_path_process,
         7: run_fourcyte_process,
+        8: run_imed_process,
         9: run_meditrust_process
         # 8: run_ucq_process # Assuming this is another task function
     }
@@ -94,7 +96,8 @@ async def main():
         'run_mater_path_process': ['family_name', 'given_name', 'dob'],
         'run_fourcyte_process': ['family_name', 'given_name', 'dob'],
         'run_ucq_process': [],
-        'run_meditrust_process': []
+        'run_meditrust_process': [],
+        'run_imed_process': ['family_name', 'given_name', 'dob']
 
         # Add more processes and their required fields as needed
     }
