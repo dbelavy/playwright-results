@@ -25,6 +25,7 @@ from providers.qscript import *
 from providers.snp_sonic import *
 from providers.myhealthrecord import *
 from providers.fourcyte import *
+from providers.meditrust import *
 from utils import *
 
 
@@ -70,7 +71,8 @@ async def main():
         4: run_QGov_Viewer_process,
         5: run_myHealthRecord_process,
         6: run_mater_path_process,
-        7: run_fourcyte_process
+        7: run_fourcyte_process,
+        9: run_meditrust_process
         # 8: run_ucq_process # Assuming this is another task function
     }
 
@@ -91,7 +93,8 @@ async def main():
         'run_myHealthRecord_process': ['family_name', 'dob', 'medicare_number', 'sex'],
         'run_mater_path_process': ['family_name', 'given_name', 'dob'],
         'run_fourcyte_process': ['family_name', 'given_name', 'dob'],
-        'run_ucq_process': []
+        'run_ucq_process': [],
+        'run_meditrust_process': []
 
         # Add more processes and their required fields as needed
     }
