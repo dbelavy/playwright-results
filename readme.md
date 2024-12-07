@@ -52,7 +52,13 @@ conda deactivate
 pip install aioconsole pynput playwright pyotp
 ```
 
+Not sure if this is necessary but I had browser problems so download playwright browsers into the venv and use them there.
+```bash
+export PLAYWRIGHT_BROWSERS_PATH=0
+playwright install```
+
 4. Install Playwright browsers:
+
 ```bash
 playwright install
 ```

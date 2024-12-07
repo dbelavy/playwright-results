@@ -203,8 +203,7 @@ async def main():
         flags.append(f"--sex {patient_details['sex']}")
 
     if flags:
-        print(f"If you want to view this patient again enter: python main.py {
-              ' '.join(flags)}")
+        print(f"If you want to view this patient again enter: python main.py {' '.join(flags)}")
 
     # Define the path to the credentials file
     # CREDENTIALS_FILE = "credentials.json"
@@ -282,8 +281,7 @@ async def main():
         flags.append(f"--sex {patient_details['sex']}")
 
     if flags:
-        print(f"If you want to view this patient again enter: python main.py {
-              ' '.join(flags)}")
+        print(f"If you want to view this patient again enter: python main.py {' '.join(flags)}")
 
     # print(f"If you want to view this patient again enter: python3 main.py --family_name {patient_details['family_name']} --given_name {patient_details['given_name']} --dob {patient_details['dob']} --medicare_number {patient_details['medicare_number']} --sex {patient_details['sex']} " )
 
