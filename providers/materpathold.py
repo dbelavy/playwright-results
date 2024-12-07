@@ -21,14 +21,14 @@ from aioconsole import ainput
 from utils import *
 
 
-async def run_mater_path_process(patient, shared_state):
+async def run_materpathold_process(patient, shared_state):
     async with async_playwright() as playwright:
         # Load credentials for the Medway process
         # Assuming load_credentials is a synchronous function, no await is needed
-        credentials = load_credentials(shared_state, "MaterPath")
+        credentials = load_credentials(shared_state, "MaterPathOld")
 
         # Print the status and loaded credentials
-        print(f"Starting Mater Pathology process")
+        print(f"Starting Mater Pathology Old process")
         #print(f"Credentials loaded are: {credentials}")
 
         # Extract username and password from credentials
@@ -93,7 +93,7 @@ async def run_mater_path_process(patient, shared_state):
         await page.get_by_role("button", name="Search").click()
 
 
-        print("Mater Pathology paused for interaction")
+        print("Mater Pathology Old paused for interaction")
 
         while not shared_state.get("exit", False):
             await asyncio.sleep(0.1)   
@@ -104,19 +104,4 @@ async def run_mater_path_process(patient, shared_state):
         await browser.close()
 
 
-
-
-
-        '''
-    page.locator("input[name=\"salamiloginlogin\"]").click()
-    
-    page.locator("input[name=\"salamiloginlogin\"]").press("Tab")
-    
-    
-    
-
-    # ---------------------
-    context.close()
-    browser.close()
-'''
 

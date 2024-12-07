@@ -20,7 +20,8 @@ from aioconsole import ainput
 
 from providers.medway import *
 from providers.the_viewer import *
-from providers.mater_path import *
+from providers.materpathold import *
+from providers.materpathnew import *
 from providers.qscript import *
 from providers.snp_sonic import *
 from providers.myhealthrecord import *
@@ -71,10 +72,11 @@ async def main():
         3: run_QScript_process,
         4: run_QGov_Viewer_process,
         5: run_myHealthRecord_process,
-        6: run_mater_path_process,
+        6: run_materpathold_process,
         7: run_fourcyte_process,
         8: run_imed_process,
-        9: run_meditrust_process
+        9: run_meditrust_process,
+        10: run_materpathnew_process
         # 8: run_ucq_process # Assuming this is another task function
     }
 
@@ -93,11 +95,13 @@ async def main():
         'run_QScript_process': ['family_name', 'given_name', 'dob'],
         'run_QGov_Viewer_process': ['family_name', 'dob', 'medicare_number', 'sex'],
         'run_myHealthRecord_process': ['family_name', 'dob', 'medicare_number', 'sex'],
-        'run_mater_path_process': ['family_name', 'given_name', 'dob'],
+        'run_materpathold_process': ['family_name', 'given_name', 'dob'],
         'run_fourcyte_process': ['family_name', 'given_name', 'dob'],
         'run_ucq_process': [],
         'run_meditrust_process': [],
-        'run_imed_process': ['family_name', 'given_name', 'dob']
+        'run_imed_process': ['family_name', 'given_name', 'dob'],
+        'run_materpathnew_process': ['family_name', 'given_name', 'dob'],
+
 
         # Add more processes and their required fields as needed
     }
