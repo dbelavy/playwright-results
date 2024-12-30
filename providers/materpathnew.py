@@ -13,26 +13,27 @@ from playwright.async_api import async_playwright
 from pynput import keyboard
 from aioconsole import ainput
 
-from utils import *
-from models import PatientDetails
+from utils import load_credentials, convert_date_format, generate_2fa_code
 
 
 async def run_materpathnew_process(patient: PatientDetails, shared_state: SharedState):
+    # Load credentials first before starting browser
+    credentials = load_credentials(shared_state, "MaterPathNew")
+    if not credentials:
+        print("Failed to load MaterPathNew credentials")
+        return
+
     async with async_playwright() as playwright:
-        # Load credentials
-        credentials = load_credentials(shared_state, "MaterPathNew")
-
         print(f"Starting MaterPathNew process")
-        # print(f"Credentials loaded are: {credentials}")
 
-        username = credentials["user_name"]
-        password = credentials["user_password"]
-        two_fa_secret = credentials["totp_secret"]
+        username = credentials.user_name
+        password = credentials.user_password
+        two_fa_secret = credentials.totp_secret
         # print(f"Credentials are {username} and {password} and {two_fa_secret}")
         
         # print(f"Patient details are: {patient}")
 
-        browser = await playwright.firefox.launch(headless=False)
+        browser = await playwright.chromium.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
 

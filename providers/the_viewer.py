@@ -13,29 +13,30 @@ from playwright.async_api import async_playwright
 from pynput import keyboard
 from aioconsole import ainput
 from playwright._impl._errors import TimeoutError
-from utils import *
+from utils import load_credentials, convert_date_format, convert_gender
 
 
 async def run_QGov_Viewer_process(patient: PatientDetails, shared_state: SharedState):
-    async with async_playwright() as playwright:
-        # Load credentials for the QGov process
-        # Assuming load_credentials is a synchronous function, no await is needed
-        credentials = load_credentials(shared_state, "QGov")
+    # Load credentials first before starting browser
+    credentials = load_credentials(shared_state, "QGov")
+    if not credentials:
+        print("Failed to load QGov credentials")
+        return
 
+    async with async_playwright() as playwright:
         # Print the status and loaded credentials
         print(f"Starting QGov The Viewer process")
-        # print(f"Credentials loaded are: {credentials}")
 
         # Extract username and password from credentials
-        username = credentials["user_name"]
-        password = credentials["user_password"]
+        username = credentials.user_name
+        password = credentials.user_password
         # print(f"Credentials are {username} and {password}")
 
         # Print patient details
         # print(f"Patient details are: {patient}")
 
         # Launch the browser and open a new page
-        browser = await playwright.firefox.launch(headless=False)
+        browser = await playwright.chromium.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
 

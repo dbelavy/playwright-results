@@ -13,30 +13,31 @@ from playwright.async_api import async_playwright
 from pynput import keyboard
 from aioconsole import ainput
 
-from utils import *
+from utils import load_credentials, convert_date_format
 
 
 
 async def run_medway_process(patient: PatientDetails, shared_state: SharedState):
-    async with async_playwright() as playwright:
-        # Load credentials for the Medway process
-        # Assuming load_credentials is a synchronous function, no await is needed
-        credentials = load_credentials(shared_state, "Medway")
+    # Load credentials first before starting browser
+    credentials = load_credentials(shared_state, "Medway")
+    if not credentials:
+        print("Failed to load Medway credentials")
+        return
 
-        # Print the status and loaded credentials
+    async with async_playwright() as playwright:
+
         print(f"Starting Medway process")
-        # print(f"Credentials loaded are: {credentials}")
 
         # Extract username and password from credentials
-        username = credentials["user_name"]
-        password = credentials["user_password"]
+        username = credentials.user_name
+        password = credentials.user_password
         # print(f"Credentials are {username} and {password}")
 
         # Print patient details
         # print(f"Patient details are: {patient}")
 
         # Launch the browser and open a new page
-        browser = await playwright.firefox.launch(headless=False)
+        browser = await playwright.chromium.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
 

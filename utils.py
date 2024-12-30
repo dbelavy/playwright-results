@@ -7,7 +7,8 @@ import re
 import queue
 import pyotp
 import threading
-from models import SharedState
+from typing import Optional
+from models import SharedState, Credentials
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -61,33 +62,16 @@ def input_thread(input_queue):
 
 
 
-# Function to load credentials from a JSON file
-def load_credentials(shared_state: SharedState, company: str):
+def load_credentials(shared_state: SharedState, company: str) -> Optional[Credentials]:
+    """Load credentials for a specific provider using the Credentials class"""
     try:
-        # Open and read the JSON file
-        file_path = shared_state.credentials_file
-        with open(file_path, 'r') as file:
-            data = json.load(file)
-
-        # Check if the company's credentials are in the file
-        if company not in data:
-            print(f"Error: Credentials for {company} not found in the file.")
-            return None
-
-    # Handle specific errors related to file operations and JSON parsing
-    except FileNotFoundError:
-        print(f"Error: The file {file_path} was not found.")
-        return None
-    except json.JSONDecodeError:
-        print(f"Error: The file {file_path} could not be decoded.")
+        return Credentials.load(shared_state.credentials_file, company)
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error loading credentials: {e}")
         return None
     except Exception as e:
-        print(f"An unexpected error occurred loading the credential file: {e}")
+        print(f"Unexpected error loading credentials: {e}")
         return None
-    else:
-        # If no errors, return the credentials
-        #print('Credentials loaded for:', company, 'which are:', data[company])
-        return data[company]
 
 
 

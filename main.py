@@ -17,20 +17,32 @@ from aioconsole import ainput
 
 
 # local files
+from providers.medway import run_medway_process
+from providers.the_viewer import run_QGov_Viewer_process
+from providers.materpathold import run_materpathold_process
+from providers.materpathnew import run_materpathnew_process
+from providers.qscript import run_QScript_process
+from providers.snp_sonic import run_SNP_process
+from providers.myhealthrecord import run_myHealthRecord_process
+from providers.fourcyte import run_fourcyte_process
+from providers.meditrust import run_meditrust_process
+from providers.imed import run_imed_process
+from utils import input_thread, process_inputs
 
 
-from providers.medway import *
-from providers.the_viewer import *
-from providers.materpathold import *
-from providers.materpathnew import *
-from providers.qscript import *
-from providers.snp_sonic import *
-from providers.myhealthrecord import *
-from providers.fourcyte import *
-from providers.meditrust import *
-from providers.imed import *
-from utils import *
-
+# Map numbers to task functions
+task_functions = {
+    1: run_medway_process,
+    2: run_SNP_process,
+    3: run_QScript_process,
+    4: run_QGov_Viewer_process,
+    5: run_myHealthRecord_process,
+    6: run_materpathold_process,
+    7: run_fourcyte_process,
+    8: run_imed_process,
+    9: run_meditrust_process,
+    10: run_materpathnew_process
+}
 
 async def run_tasks(patient_details=None, selected_tasks=None):
     """Run the selected tasks with the given patient details.
@@ -39,19 +51,6 @@ async def run_tasks(patient_details=None, selected_tasks=None):
         patient_details: Optional PatientDetails object. If None, will prompt for details.
         selected_tasks: Optional list of task numbers. If None, will prompt for selection.
     """
-    # Map numbers to task functions
-    task_functions = {
-        1: run_medway_process,
-        2: run_SNP_process,
-        3: run_QScript_process,
-        4: run_QGov_Viewer_process,
-        5: run_myHealthRecord_process,
-        6: run_materpathold_process,
-        7: run_fourcyte_process,
-        8: run_imed_process,
-        9: run_meditrust_process,
-        10: run_materpathnew_process
-    }
 
     if selected_tasks is None:
         # Display the task options
@@ -106,27 +105,34 @@ async def run_tasks(patient_details=None, selected_tasks=None):
 
     print(f'Required fields are: {required_fields}\n')
 
-    if patient_details is None:
-        # Set up command line arguments for the script
-        parser = argparse.ArgumentParser(
-            description="Run Playwright script with user data")
-        parser.add_argument("--family_name", help="Family Name", required=False)
-        parser.add_argument("--given_name", help="Given Name", required=False)
-        parser.add_argument(
-            "--dob", help="Date of Birth (DDMMYYYY)", required=False)
-        parser.add_argument("--medicare_number",
-                            help="Medicare Number (optional)", required=False)
-        parser.add_argument("--sex", help="Sex (M, F, or I)", required=False)
-        args = parser.parse_args()
+    # Set up command line arguments for the script
+    parser = argparse.ArgumentParser(
+        description="Run Playwright script with user data")
+    parser.add_argument("--family_name", help="Family Name", required=False)
+    parser.add_argument("--given_name", help="Given Name", required=False)
+    parser.add_argument(
+        "--dob", help="Date of Birth (DDMMYYYY)", required=False)
+    parser.add_argument("--medicare_number",
+                        help="Medicare Number (optional)", required=False)
+    parser.add_argument("--sex", help="Sex (M, F, or I)", required=False)
+    args = parser.parse_args()
 
-        # Create PatientDetails object from args and required fields
-        patient_details = PatientDetails.from_args(args, required_fields)
-        print(f"Patient Details Collected: {patient_details}\n")
+    # If patient_details exists, create args from existing details
+    if patient_details is not None:
+        args.family_name = patient_details.family_name
+        args.given_name = patient_details.given_name
+        args.dob = patient_details.dob
+        args.medicare_number = patient_details.medicare_number
+        args.sex = patient_details.sex
 
-        # Get CLI args string for rerunning with same patient
-        flags = patient_details.to_cli_args()
-        if flags:
-            print(f"If you want to view this patient again enter: python main.py {flags}")
+    # Create or update PatientDetails object from args and required fields
+    patient_details = PatientDetails.from_args(args, required_fields)
+    print(f"Patient Details Collected: {patient_details}\n")
+
+    # Get CLI args string for rerunning with same patient
+    flags = patient_details.to_cli_args()
+    if flags:
+        print(f"If you want to view this patient again enter: python main.py {flags}")
 
     # Define the path to the credentials file
     # CREDENTIALS_FILE = "credentials.json"

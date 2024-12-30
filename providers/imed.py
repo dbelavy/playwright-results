@@ -13,29 +13,30 @@ from playwright.async_api import async_playwright
 from pynput import keyboard
 from aioconsole import ainput
 
-from utils import *
-from models import PatientDetails
+from utils import load_credentials, convert_date_format
 
 
 async def run_imed_process(patient: PatientDetails, shared_state: SharedState):
-    async with async_playwright() as playwright:
-        # Load credentials for the Medway process
-        # Assuming load_credentials is a synchronous function, no await is needed
-        credentials = load_credentials(shared_state, "IMed")
+    # Load credentials first before starting browser
+    credentials = load_credentials(shared_state, "IMed")
+    if not credentials:
+        print("Failed to load I-Med credentials")
+        return
 
+    async with async_playwright() as playwright:
         print(f"Starting I-Med process")
 
         # Extract credentials
-        username = credentials["user_name"]
-        password = credentials["user_password"]
-        postcode = credentials["postcode"]
-        suburb = credentials["suburb"]
+        username = credentials.user_name
+        password = credentials.user_password
+        postcode = credentials.postcode
+        suburb = credentials.suburb
 
         # Convert date of birth to required format
         converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%d/%m/%Y")
 
         # Launch the browser and open a new page
-        browser = await playwright.firefox.launch(headless=False)
+        browser = await playwright.chromium.launch(headless=False)
         context = await browser.new_context()
         page = await context.new_page()
 
