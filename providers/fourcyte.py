@@ -1,93 +1,87 @@
-import json
-import aioconsole
-import argparse
-import time
-import asyncio
-import re
-import queue
-import threading
-from playwright.sync_api import Playwright, sync_playwright, expect
-from models import PatientDetails, SharedState
-from datetime import datetime
-from playwright.async_api import async_playwright
-from pynput import keyboard
-from aioconsole import ainput
+# Define provider requirements at module level
+REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
 
+from playwright.async_api import Playwright, async_playwright, Page
+from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format, generate_2fa_code
 
+class FourCyteSession(Session):
+    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+        super().__init__("4cyte", credentials, patient, shared_state)
+        self.active_page: Page | None = None  # For handling popup window
+
+    async def initialize(self, playwright: Playwright) -> None:
+        """Initialize browser session"""
+        print(f"Starting {self.name} process")
+        self.browser = await playwright.chromium.launch(headless=False)
+        self.context = await self.browser.new_context()
+        self.page = await self.context.new_page()
+        self.active_page = self.page  # Start with main page as active
+        await self.page.goto("https://www.4cyte.com.au/clinicians")
+
+    async def login(self) -> None:
+        """Handle login process including 2FA and popup"""
+        if not self.page:
+            raise RuntimeError("Session not initialized")
+
+        # Click Web Results Portal
+        await self.page.get_by_role("link", name="Web Results Portal").click()
+
+        # Handle popup window
+        async with self.page.expect_popup() as page1_info:
+            await self.page.get_by_label("Access results portal").click()
+            popup = await page1_info.value
+            self.active_page = popup  # Update active page to popup
+
+        # Login in popup window
+        await self.active_page.get_by_placeholder("Username").click()
+        await self.active_page.get_by_placeholder("Username").fill(self.credentials.user_name)
+        await self.active_page.get_by_placeholder("Password").click()
+        await self.active_page.get_by_placeholder("Password").fill(self.credentials.user_password)
+        await self.active_page.get_by_role("button", name="Log in").click()
+
+        # Handle 2FA
+        two_fa_code = generate_2fa_code(self.credentials.totp_secret)
+        print(f"Generated 2FA code: {two_fa_code}")
+
+        await self.page.wait_for_load_state("networkidle")
+        await self.active_page.get_by_placeholder("-digit code").click()
+        await self.active_page.get_by_placeholder("-digit code").fill(two_fa_code)
+        await self.active_page.get_by_role("button", name="Submit").click()
+
+        # Navigate to patients and handle break glass
+        await self.active_page.get_by_role("button", name="Patients").click()
+        await self.active_page.get_by_role("link", name=" Break Glass").click()
+        await self.active_page.get_by_role("button", name="Accept").click()
+
+    async def search_patient(self) -> None:
+        """Handle patient search"""
+        if not self.active_page:
+            raise RuntimeError("Session not initialized")
+
+        # Convert DOB
+        converted_dob = convert_date_format(self.patient.dob, "%d%m%Y", "%d/%m/%Y")
+
+        # Fill combined name field (surname + first name)
+        await self.active_page.get_by_placeholder("Surname [space] First name").fill(
+            f'{self.patient.family_name} {self.patient.given_name}'
+        )
+        
+        # Fill DOB
+        await self.active_page.get_by_placeholder("Birth Date (Required)").click()
+        await self.active_page.get_by_placeholder("Birth Date (Required)").fill(converted_dob)
+        
+        # Initiate search
+        await self.active_page.get_by_role("button", name="Search").click()
 
 async def run_fourcyte_process(patient: PatientDetails, shared_state: SharedState):
-    # Load credentials first before starting browser
+    # Load credentials
     credentials = load_credentials(shared_state, "4cyte")
     if not credentials:
         print("Failed to load 4cyte credentials")
         return
 
+    # Create and run session
+    session = FourCyteSession(credentials, patient, shared_state)
     async with async_playwright() as playwright:
-        # Print the status and loaded credentials
-        print(f"Starting 4cyte process")
-
-        # Extract username and password from credentials
-        username = credentials.user_name
-        password = credentials.user_password
-        two_fa_secret = credentials.totp_secret
-        # print(f"Credentials are {username} and {password} and {two_fa_secret}")
-        
-        # Print patient details
-        #print(f"Patient details are: {patient}")
-
-        # Launch the browser and open a new page
-        browser = await playwright.chromium.launch(headless=False)
-        context = await browser.new_context()
-        page = await context.new_page()
-
-        # Navigate to the 4cyte login page
-        await page.goto("https://www.4cyte.com.au/clinicians")
-        await page.get_by_role("link", name="Web Results Portal").click()
-
-        #print("Waiting for popup")
-
-        async with page.expect_popup() as page1_info:
-            await page.get_by_label("Access results portal").click()
-            page1 = await page1_info.value
-
-       
-            await page1.get_by_placeholder("Username").click()
-            await page1.get_by_placeholder("Username").fill(username)
-            await page1.get_by_placeholder("Password").click()
-            await page1.get_by_placeholder("Password").fill(password)
-            await page1.get_by_role("button", name="Log in").click()
-
-            # Handle 2FA
-            two_fa_code = generate_2fa_code(two_fa_secret)
-            print(f"Generated 2FA code: {two_fa_code}")
-
-            await page.wait_for_load_state("networkidle")
-            await page1.get_by_placeholder("-digit code").click()
-            await page1.get_by_placeholder("-digit code").fill(two_fa_code)
-            await page1.get_by_role("button", name="Submit").click()
-
-            await page1.get_by_role("button", name="Patients").click()
-            #print('Trying to click Break Glass')
-            await page1.get_by_role("link", name=" Break Glass").click()
-
-
-
-            # Convert and fill patient details
-            converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%d/%m/%Y")
-
-            await page1.get_by_role("button", name="Accept").click()
-            await page1.get_by_placeholder("Surname [space] First name").fill(f'{patient.family_name} {patient.given_name}')
-            await page1.get_by_placeholder("Birth Date (Required)").click()
-            await page1.get_by_placeholder("Birth Date (Required)").fill(converted_dob)
-            await page1.get_by_role("button", name="Search").click()
-
-            print("4Cyte Pathology paused for interaction")
-
-            while not shared_state.exit:
-                await asyncio.sleep(0.1)   
-            print("4Cyte Pathology received exit signal")
-    
-            # Close the browser context and the browser
-            await context.close()
-            await browser.close()
+        await session.run(playwright)

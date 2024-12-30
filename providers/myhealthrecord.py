@@ -1,125 +1,109 @@
-
-import json
-import aioconsole
-import argparse
-import time
-import asyncio
-import re
-import queue
-import threading
-from playwright.sync_api import Playwright, sync_playwright, expect
-from models import PatientDetails, SharedState
-from datetime import datetime
-from playwright.async_api import async_playwright
-from pynput import keyboard
-from aioconsole import ainput
-
+from playwright.async_api import Playwright, async_playwright, Page
+from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format
+import asyncio
 
+# Define provider requirements at module level
+REQUIRED_FIELDS = ['family_name', 'dob', 'medicare_number', 'sex']
+
+class MyHealthRecordSession(Session):
+    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+        super().__init__("MyHealthRecord", credentials, patient, shared_state)
+
+    async def initialize(self, playwright: Playwright) -> None:
+        """Initialize browser session"""
+        print(f"Starting {self.name} process")
+        self.browser = await playwright.chromium.launch(headless=False)
+        self.context = await self.browser.new_context()
+        self.page = await self.context.new_page()
+        await self.page.goto("https://proda.humanservices.gov.au/prodalogin/pages/public/login.jsf?TAM_OP=login&USER")
+        await self.page.wait_for_load_state("networkidle")
+
+    async def login(self) -> None:
+        """Handle login process including 2FA"""
+        if not self.page:
+            raise RuntimeError("Session not initialized")
+
+        # Initial login
+        await self.page.get_by_label("Username").click()
+        await self.page.get_by_label("Username").fill(self.credentials.user_name)
+        await self.page.get_by_label("Password", exact=True).click()
+        await self.page.get_by_label("Password", exact=True).fill(self.credentials.user_password)
+        await self.page.get_by_role("button", name="Login", exact=True).click()
+        await self.page.wait_for_load_state("networkidle")
+
+        # Handle 2FA
+        print("Please enter 2FA for PRODA starting with a P. eg P123456 \n")
+        while not self.shared_state.PRODA_code:
+            await asyncio.sleep(1)  # Check for the 2FA code every second
+
+        two_fa_code = self.shared_state.PRODA_code
+        self.shared_state.PRODA_code = None
+
+        await self.page.get_by_label("Enter Code").click()
+        await self.page.get_by_label("Enter Code").fill(two_fa_code)
+        print("MyHR waiting for click the 2FA \"Next\" button")
+        await asyncio.sleep(0.2)
+        await self.page.keyboard.press('Enter')
+
+        # Navigate to MyHealthRecord
+        print("Clicking through to my health record")
+        await self.page.get_by_role("link", name="My Health Record").click()
+        await self.page.wait_for_load_state("networkidle")
+
+        # Select provider
+        await self.page.click(f'input[name="radio1"][value="{self.credentials.PRODA_full_name}"]')
+        await self.page.wait_for_selector('input#submitValue', state='visible')
+        await self.page.wait_for_load_state("networkidle")
+        await self.page.click('input#submitValue')
+
+        # Added pause between pages to prevent failures
+        await asyncio.sleep(5)
+        await self.page.wait_for_load_state("networkidle")
+
+    async def search_patient(self) -> None:
+        """Handle patient search"""
+        if not self.page:
+            raise RuntimeError("Session not initialized")
+
+        print("Filling in patient details")
+        
+        # Fill family name using query selector for reliability
+        element_handle = await self.page.query_selector("#lname")
+        await element_handle.click()
+        await element_handle.fill(self.patient.family_name)
+        await element_handle.press("Tab")
+
+        # Convert and fill DOB
+        converted_dob = convert_date_format(self.patient.dob, "%d%m%Y", "%d/%m/%Y")
+        await self.page.get_by_placeholder("DD-Mmm-YYYY").fill(converted_dob)
+
+        # Handle gender selection
+        if self.patient.sex == "M":
+            await self.page.get_by_label("Male", exact=True).check()
+        elif self.patient.sex == "F":
+            await self.page.get_by_label("Female").check()
+        elif self.patient.sex == "I":
+            await self.page.get_by_label("Intersex").check()
+        else:
+            await self.page.get_by_label("Not Stated").check()
+        
+        # Fill Medicare details
+        await self.page.get_by_label("Medicare").check()
+        await self.page.get_by_placeholder("Medicare number with IRN").click()
+        await self.page.get_by_placeholder("Medicare number with IRN").fill(self.patient.medicare_number)
+        
+        # Initiate search
+        await self.page.get_by_role("button", name="Search").click()
 
 async def run_myHealthRecord_process(patient: PatientDetails, shared_state: SharedState):
-    # Load credentials first before starting browser
+    # Load credentials
     credentials = load_credentials(shared_state, "PRODA")
     if not credentials:
         print("Failed to load PRODA credentials")
         return
 
-    async with async_playwright() as playwright:        
-        print(f"Starting myHealthRecord process")
-
-        # Extract credentials
-        username = credentials.user_name
-        password = credentials.user_password
-        PRODA_full_name = credentials.PRODA_full_name
-
-        browser = await playwright.chromium.launch(headless=False)
-        context = await browser.new_context()
-        page = await context.new_page()
-
-        # Navigate to login page
-        await page.goto("https://proda.humanservices.gov.au/prodalogin/pages/public/login.jsf?TAM_OP=login&USER")
-        
-        await page.wait_for_load_state("networkidle")
-        await page.get_by_label("Username").click()
-        await page.get_by_label("Username").fill(username)
-        await page.get_by_label("Password", exact=True).click()
-        await page.get_by_label("Password", exact=True).fill(password)
-        await page.get_by_role("button", name="Login", exact=True).click()
-
-    
-        
-        await page.wait_for_load_state("networkidle")
-
-        
-        # Handle 2FA asynchronously
-        
-        # Wait for the 2FA code to be entered from the Queue
-        print("Please enter 2FA for PRODA starting with a P. eg P123456 \n")
-        while not shared_state.PRODA_code:
-            await asyncio.sleep(1)  # Check for the 2FA code every second
-
-        # Once the 2FA code is available, use it
-        two_fa_code = shared_state.PRODA_code
-        shared_state.PRODA_code = None
-        
-
-        await page.get_by_label("Enter Code").click()
-        await page.get_by_label("Enter Code").fill(two_fa_code)
-        print("MyHR waiting for click the 2FA \"Next\" button")
-        await asyncio.sleep(0.2)
-        # Using keyboard Enter as it's more reliable than clicking Next
-        await page.keyboard.press('Enter')
-
-        print("Clicking through to my health record")
-        await page.get_by_role("link", name="My Health Record").click()
-        await page.wait_for_load_state("networkidle")
-
-        await page.click(f'input[name="radio1"][value="{PRODA_full_name}"]')
-        # next one stopped working
-        # await page.get_by_text(PRODA_full_name, exact=True).click()
-
-
-        await page.wait_for_selector('input#submitValue', state='visible')
-        await page.wait_for_load_state("networkidle")
-        await page.click('input#submitValue')
-
-        # Added pause between pages to prevent failures
-        await asyncio.sleep(5)
-        await page.wait_for_load_state("networkidle")
-
-        print("Filling in patient details")
-        
-        # Fill in family name - using query selector as it's most reliable
-        element_handle = await page.query_selector("#lname")
-        await element_handle.click()
-        await element_handle.fill(patient.family_name)
-        await element_handle.press("Tab")
-
-        # Convert and fill date of birth
-        converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%d/%m/%Y")
-        await page.get_by_placeholder("DD-Mmm-YYYY").fill(converted_dob)
-
-        # Handle gender selection
-        if patient.sex == "M":
-            await page.get_by_label("Male", exact=True).check()
-        elif patient.sex == "F":
-            await page.get_by_label("Female").check()
-        elif patient.sex == "I":
-            await page.get_by_label("Intersex").check()
-        else:
-            await page.get_by_label("Not Stated").check()
-        
-        # Fill in Medicare details
-        await page.get_by_label("Medicare").check()
-        await page.get_by_placeholder("Medicare number with IRN").click()
-        await page.get_by_placeholder("Medicare number with IRN").fill(patient.medicare_number)
-        await page.get_by_role("button", name="Search").click()
-        print("My Health Record paused for interaction")
-
-        while not shared_state.exit:
-            await asyncio.sleep(0.1)
-
-        print("My Health Record received exit signal")
-
-        await context.close()
-        await browser.close()
+    # Create and run session
+    session = MyHealthRecordSession(credentials, patient, shared_state)
+    async with async_playwright() as playwright:
+        await session.run(playwright)
