@@ -6,15 +6,19 @@ import asyncio
 import re
 import queue
 import threading
+from typing import Dict, Any
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
 from playwright.async_api import async_playwright
 from pynput import keyboard
 from aioconsole import ainput
-from utils import *
 
-async def run_materpathnew_process(patient, shared_state):
+from utils import *
+from models import PatientDetails
+
+
+async def run_materpathnew_process(patient: PatientDetails, shared_state: Dict[str, Any]):
     async with async_playwright() as playwright:
         # Load credentials
         credentials = load_credentials(shared_state, "MaterPathNew")
@@ -125,12 +129,12 @@ async def run_materpathnew_process(patient, shared_state):
 
         # Patient search
         await page.get_by_placeholder("Surname").click()
-        await page.get_by_placeholder("Surname").fill(patient["family_name"])
+        await page.get_by_placeholder("Surname").fill(patient.family_name)
 
         await page.get_by_placeholder("First Name").click()
-        await page.get_by_placeholder("First Name").fill(patient["given_name"])
+        await page.get_by_placeholder("First Name").fill(patient.given_name)
 
-        converted_dob = convert_date_format(patient['dob'], "%d%m%Y", "%Y-%m-%d")
+        converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%Y-%m-%d")
         await page.get_by_placeholder("Date of Birth").fill(converted_dob)
 
         await page.get_by_role("button", name="Search").click()

@@ -5,8 +5,9 @@ import time
 import asyncio
 import re
 import queue
-
 import threading
+
+from models import PatientDetails
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -31,40 +32,13 @@ from providers.imed import *
 from utils import *
 
 
-async def main():
-    '''Some improvements to implement with data collection for the script
-    # Dictionary mapping processes to required patient detail fields
-    required_fields_for_process = {
-        'Process_A': ['family_name', 'dob'],
-        'Process_B': ['family_name', 'given_name', 'medicare_number'],
-        'Process_C': ['family_name', 'given_name', 'dob', 'medicare_number', 'sex'],
-        # Add more processes and their required fields as needed
-    }
-
-    # Function to get patient details based on the required fields for a process
-    def get_patient_details_for_process(process_name):
-        required_fields = required_fields_for_process.get(process_name, [])
-
-        patient_details = {}
-        for field in required_fields:
-            if field == 'family_name':
-                patient_details[field] = args.family_name if args.family_name else input("Enter Family Name: ")
-            elif field == 'given_name':
-                patient_details[field] = args.given_name if args.given_name else input("Enter Given Name: ")
-            elif field == 'dob':
-                patient_details[field] = args.dob if args.dob else input("Enter DOB (DDMMYYYY): ")
-            elif field == 'medicare_number':
-                patient_details[field] = str(args.medicare_number) if args.medicare_number else str(input("Enter Medicare Number (if applicable): "))
-            elif field == 'sex':
-                patient_details[field] = args.sex.upper() if args.sex else input("Enter Sex (M, F, or I), or press 'Enter' to skip: ").upper()
-
-        return patient_details
-
-    # Example usage
-    process_name = 'Process_A'  # This could be determined dynamically based on user input or program flow
-    patient_details = get_patient_details_for_process(process_name)
-    '''
-
+async def run_tasks(patient_details=None, selected_tasks=None):
+    """Run the selected tasks with the given patient details.
+    
+    Args:
+        patient_details: Optional PatientDetails object. If None, will prompt for details.
+        selected_tasks: Optional list of task numbers. If None, will prompt for selection.
+    """
     # Map numbers to task functions
     task_functions = {
         1: run_medway_process,
@@ -77,16 +51,16 @@ async def main():
         8: run_imed_process,
         9: run_meditrust_process,
         10: run_materpathnew_process
-        # 8: run_ucq_process # Assuming this is another task function
     }
 
-    # Display the task options
-    print("Select tasks to run (separate by commas):")
-    for number, task in task_functions.items():
-        print(f"{number}: {task.__name__}")
+    if selected_tasks is None:
+        # Display the task options
+        print("\nSelect tasks to run (separate by commas):")
+        for number, task in task_functions.items():
+            print(f"{number}: {task.__name__}")
 
-    # Prompt the user for task selection
-    selected_tasks = input("Enter task numbers: ").split(',')
+        # Prompt the user for task selection
+        selected_tasks = input("Enter task numbers: ").split(',')
 
     # Dictionary mapping processes to required patient detail fields
     required_fields_for_process = {
@@ -132,97 +106,42 @@ async def main():
 
     print(f'Required fields are: {required_fields}\n')
 
-    # Set up command line arguments for the script
-    parser = argparse.ArgumentParser(
-        description="Run Playwright script with user data")
-    parser.add_argument("--family_name", help="Family Name", required=False)
-    parser.add_argument("--given_name", help="Given Name", required=False)
-    parser.add_argument(
-        "--dob", help="Date of Birth (DDMMYYYY)", required=False)
-    parser.add_argument("--medicare_number",
-                        help="Medicare Number (optional)", required=False)
-    parser.add_argument("--sex", help="Sex (M, F, or I)", required=False)
-    args = parser.parse_args()
+    if patient_details is None:
+        # Set up command line arguments for the script
+        parser = argparse.ArgumentParser(
+            description="Run Playwright script with user data")
+        parser.add_argument("--family_name", help="Family Name", required=False)
+        parser.add_argument("--given_name", help="Given Name", required=False)
+        parser.add_argument(
+            "--dob", help="Date of Birth (DDMMYYYY)", required=False)
+        parser.add_argument("--medicare_number",
+                            help="Medicare Number (optional)", required=False)
+        parser.add_argument("--sex", help="Sex (M, F, or I)", required=False)
+        args = parser.parse_args()
 
-    # Initialize the patient_details dictionary with conditional input based on required fields
-    patient_details = {}
+        # Create PatientDetails object from args and required fields
+        patient_details = PatientDetails.from_args(args, required_fields)
+        print(f"Patient Details Collected: {patient_details}\n")
 
-    # For each field, check if it's required. If it is, use the command line value if provided, otherwise prompt for input.
-    patient_details['family_name'] = args.family_name if args.family_name else (
-        input("Enter Family Name: ") if 'family_name' in required_fields else None)
-    patient_details['given_name'] = args.given_name if args.given_name else (
-        input("Enter Given Name: ") if 'given_name' in required_fields else None)
-    # Validate the date of birth input
-    if 'dob' in required_fields:
-        if args.dob:
-            patient_details['dob'] = args.dob
-        else:
-            dob_pattern = re.compile(r"^\d{2}\d{2}\d{4}$")
-            while True:
-                dob_input = input("Enter DOB (DDMMYYYY): ")
-                if dob_pattern.match(dob_input):
-                    # Further validation to ensure it's a valid date
-                    try:
-                        datetime.strptime(dob_input, "%d%m%Y")
-                        patient_details['dob'] = dob_input
-                        break
-                    except ValueError:
-                        print(
-                            "Invalid date. Please enter a valid date in DDMMYYYY format.")
-                else:
-                    print(
-                        "Invalid date format. Please enter the date in DDMMYYYY format.")
-    else:
-        patient_details['dob'] = None
-
-    # patient_details['dob'] = args.dob if args.dob else (input("Enter DOB (DDMMYYYY): ") if 'dob' in required_fields else None)
-    patient_details['medicare_number'] = str(args.medicare_number) if args.medicare_number else (
-        str(input("Enter Medicare Number: ")) if 'medicare_number' in required_fields else None)
-    if 'sex' in required_fields:
-        # Get the value from args if provided, otherwise prompt for input
-        patient_details['sex'] = args.sex.upper() if args.sex else input(
-            "Enter Sex (M, F, or I): ").upper()
-        # Ensure valid sex input
-        while patient_details['sex'] not in ["M", "F", "I", ""]:
-            print("Invalid input. Please enter 'M', 'F', 'I'")
-            patient_details['sex'] = input("Enter Sex (M, F, or I): ").upper()
-    else:
-        # If 'sex' is not required, set it to None or a default value
-        patient_details['sex'] = None
-
-    print(f"Patient Details Collected: {patient_details}\n")
-
-    # print instructions on how to restart the app with same patient
-    flags = []
-
-    if patient_details['family_name']:
-        flags.append(f"--family_name {patient_details['family_name']}")
-    if patient_details['given_name']:
-        flags.append(f"--given_name {patient_details['given_name']}")
-    if patient_details['dob']:
-        flags.append(f"--dob {patient_details['dob']}")
-    if patient_details['medicare_number']:
-        flags.append(f"--medicare_number {patient_details['medicare_number']}")
-    if patient_details['sex']:
-        flags.append(f"--sex {patient_details['sex']}")
-
-    if flags:
-        print(f"If you want to view this patient again enter: python main.py {' '.join(flags)}")
+        # Get CLI args string for rerunning with same patient
+        flags = patient_details.to_cli_args()
+        if flags:
+            print(f"If you want to view this patient again enter: python main.py {flags}")
 
     # Define the path to the credentials file
     # CREDENTIALS_FILE = "credentials.json"
 
     # Start a queue AFTER we've know patient data and which processes to look into.
 
+    # Create a fresh queue and shared state for this run
     input_queue = queue.Queue()
     shared_state = {
         "QScript_code": None,
         "PRODA_code": None,
         "4Cyte_code": None,
         "paused": True,
-        "exit": False,
+        "exit": False,  # Reset for each run
         "credentials_file": "credentials.json"
-
     }
 
     # Start the input thread
@@ -256,9 +175,8 @@ async def main():
         await asyncio.gather(*tasks)
     except asyncio.CancelledError:
         print("Tasks cancelled during shutdown.")
-        pass  # This is normal during shutdown
 
-    # Cancel all tasks - suspect redundancy here.
+    # Cancel all tasks
     for task in tasks:
         task.cancel()
         try:
@@ -267,28 +185,37 @@ async def main():
             pass
 
     print("quitting input thread...")
-    input_thread_instance.join()  # Ensure input thread is also completed
+    input_thread_instance.join()
     print("All tasks terminated.")
 
-    # print instructions on how to restart the app with same patient
-    flags = []
+    return patient_details, selected_tasks
 
-    if patient_details['family_name']:
-        flags.append(f"--family_name {patient_details['family_name']}")
-    if patient_details['given_name']:
-        flags.append(f"--given_name {patient_details['given_name']}")
-    if patient_details['dob']:
-        flags.append(f"--dob {patient_details['dob']}")
-    if patient_details['medicare_number']:
-        flags.append(f"--medicare_number {patient_details['medicare_number']}")
-    if patient_details['sex']:
-        flags.append(f"--sex {patient_details['sex']}")
-
-    if flags:
-        print(f"If you want to view this patient again enter: python main.py {' '.join(flags)}")
-
-    # print(f"If you want to view this patient again enter: python3 main.py --family_name {patient_details['family_name']} --given_name {patient_details['given_name']} --dob {patient_details['dob']} --medicare_number {patient_details['medicare_number']} --sex {patient_details['sex']} " )
-
+async def main():
+    """Main program loop that handles patient and task selection."""
+    patient_details = None
+    selected_tasks = None
+    
+    while True:
+        if patient_details is not None:
+            print("\nWhat would you like to do?")
+            print("1: Use same patient (select new tasks)")
+            print("2: Enter new patient details")
+            print("3: Exit program")
+            choice = input("Enter choice (1-3): ").strip()
+            
+            if choice == "2":
+                patient_details = None
+                selected_tasks = None
+            elif choice == "1":
+                selected_tasks = None  # Keep patient but get new task selection
+            elif choice == "3":
+                print("Goodbye!")
+                break
+            else:
+                print("Invalid choice, please try again")
+                continue
+                
+        patient_details, selected_tasks = await run_tasks(patient_details, selected_tasks)
 
 # Run the main function
 asyncio.run(main())

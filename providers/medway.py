@@ -5,8 +5,8 @@ import time
 import asyncio
 import re
 import queue
-
 import threading
+from typing import Dict, Any
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -15,9 +15,10 @@ from pynput import keyboard
 from aioconsole import ainput
 
 from utils import *
+from models import PatientDetails
 
 
-async def run_medway_process(patient, shared_state):
+async def run_medway_process(patient: PatientDetails, shared_state: Dict[str, Any]):
     async with async_playwright() as playwright:
         # Load credentials for the Medway process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -55,20 +56,20 @@ async def run_medway_process(patient, shared_state):
 
         # Fill in patient details in the web form
         await page.get_by_label("Patient surname").click()
-        await page.get_by_label("Patient surname").fill(patient["family_name"])
+        await page.get_by_label("Patient surname").fill(patient.family_name)
         await page.get_by_label("Patient surname").press("Tab")
         await page.get_by_label("Patient given name(s)").click()
-        await page.get_by_label("Patient given name(s)").fill(patient["given_name"])
+        await page.get_by_label("Patient given name(s)").fill(patient.given_name)
         await page.get_by_label("Patient given name(s)").press("Tab")
 
-        if patient['medicare_number'] != None:
+        if patient.medicare_number is not None:
             medicare_field = page.get_by_placeholder("digit Medicare number")
-            await medicare_field.fill(patient['medicare_number'][:10])
+            await medicare_field.fill(patient.medicare_number[:10])
             await medicare_field.press("Tab")  # Move to the next field
 
         # Convert the patient's date of birth to the required format
         converted_dob = convert_date_format(
-            patient['dob'], "%d%m%Y", "%Y-%m-%d")
+            patient.dob, "%d%m%Y", "%Y-%m-%d")
         # print(converted_dob)
 
         # Fill in the date of birth field

@@ -215,10 +215,21 @@ source venv/bin/activate
 
 ## Security Notes
 
-- Credentials are stored locally and read from a local JSON file IN PLAIN TEXT. This needs to be updated!!!
+### Credentials Storage
+- Credentials are stored in a local JSON file for easy user editing
+- Recommended security measures:
+  1. Store credentials.json outside the project directory (e.g., in your home directory)
+  2. Set file permissions to 600 (owner read/write only):
+     ```bash
+     chmod 600 credentials.json
+     ```
+  3. Never commit credentials.json to version control (keep in .gitignore)
+  4. Keep credentials.json.example in the repo as a template
+
+### General Security
 - No credential information is transmitted to external servers except for legitimate login purposes
-- Always ensure your `credentials.json` is properly secured and not shared
-- For 4cyte, the TOTP secret key is sensitive information and should be secured like any other credential
+- Always ensure your credentials.json is properly secured and not shared
+- For services with TOTP secret keys, this is sensitive information and should be secured like passwords
 
 ## Contributing
 

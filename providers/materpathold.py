@@ -1,7 +1,4 @@
 
-### This is medway converted for mater pathology
-    
-
 import json
 import aioconsole
 import argparse
@@ -9,8 +6,8 @@ import time
 import asyncio
 import re
 import queue
-
 import threading
+from typing import Dict, Any
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -19,9 +16,10 @@ from pynput import keyboard
 from aioconsole import ainput
 
 from utils import *
+from models import PatientDetails
 
 
-async def run_materpathold_process(patient, shared_state):
+async def run_materpathold_process(patient: PatientDetails, shared_state: Dict[str, Any]):
     async with async_playwright() as playwright:
         # Load credentials for the Medway process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -76,12 +74,12 @@ async def run_materpathold_process(patient, shared_state):
         # Fill in patient details in the web form
         await page.get_by_role("cell", name="Welcome to the Mater").get_by_role("link").nth(1).click()
         await page.locator("input[name=\"surname\"]").click()
-        await page.locator("input[name=\"surname\"]").fill(patient["family_name"])
+        await page.locator("input[name=\"surname\"]").fill(patient.family_name)
         await page.locator("input[name=\"firstname\"]").click()
-        await page.locator("input[name=\"firstname\"]").fill(patient["given_name"])
+        await page.locator("input[name=\"firstname\"]").fill(patient.given_name)
 
         # Convert the patient's date of birth to the required format
-        converted_dob = convert_date_format(patient['dob'], "%d%m%Y", "%d/%m/%Y")
+        converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%d/%m/%Y")
         print(f'Converted DOB: {converted_dob}')
 
         # Fill in the date of birth field
@@ -97,11 +95,8 @@ async def run_materpathold_process(patient, shared_state):
 
         while not shared_state.get("exit", False):
             await asyncio.sleep(0.1)   
-        print("Medway received exit signal")
+        print("Mater Pathology Old received exit signal")
   
         # Close the browser context and the browser
         await context.close()
         await browser.close()
-
-
-

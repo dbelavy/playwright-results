@@ -1,6 +1,3 @@
-### This is mater converted for 4cyte
-    
-
 import json
 import aioconsole
 import argparse
@@ -8,8 +5,8 @@ import time
 import asyncio
 import re
 import queue
-
 import threading
+from typing import Dict, Any
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -18,9 +15,10 @@ from pynput import keyboard
 from aioconsole import ainput
 
 from utils import *
+from models import PatientDetails
 
 
-async def run_fourcyte_process(patient, shared_state):
+async def run_fourcyte_process(patient: PatientDetails, shared_state: Dict[str, Any]):
     async with async_playwright() as playwright:
         # Load credentials for the Medway process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -34,7 +32,7 @@ async def run_fourcyte_process(patient, shared_state):
         username = credentials["user_name"]
         password = credentials["user_password"]
         two_fa_secret = credentials["totp_secret"]
-        print(f"Credentials are {username} and {password} and {two_fa_secret}")
+        # print(f"Credentials are {username} and {password} and {two_fa_secret}")
         
         # Print patient details
         #print(f"Patient details are: {patient}")
@@ -61,54 +59,14 @@ async def run_fourcyte_process(patient, shared_state):
             await page1.get_by_placeholder("Password").fill(password)
             await page1.get_by_role("button", name="Log in").click()
 
-            #handle 2FA
-
-
-            #print("Please enter 2FA for 4Cyte (Authenticator App) starting with F\n")
-            #while not shared_state["4Cyte_code"]:
-            #
-            #   await asyncio.sleep(1)  # Check for the 2FA code every second
-
-            # Once the 2FA code is available, use it
-            #two_fa_code = shared_state["4Cyte_code"]
-            #shared_state["4Cyte_code"]=None
-
-            # get 2FA code from PYOP
+            # Handle 2FA
             two_fa_code = generate_2fa_code(two_fa_secret)
             print(f"Generated 2FA code: {two_fa_code}")
 
-
-            #wait for PIN page to load
-
-            #print ("await page.wait_for_load_state")
             await page.wait_for_load_state("networkidle")
-
             await page1.get_by_placeholder("-digit code").click()
-            
             await page1.get_by_placeholder("-digit code").fill(two_fa_code)
             await page1.get_by_role("button", name="Submit").click()
-            
-            
-
-
-
-
-
-
-
-
-            
-            
-
-
-
-
-
-
-
-
-
-
 
             await page1.get_by_role("button", name="Patients").click()
             #print('Trying to click Break Glass')
@@ -116,32 +74,21 @@ async def run_fourcyte_process(patient, shared_state):
 
 
 
-            # Convert the patient's date of birth to the required format
-            converted_dob = convert_date_format(patient['dob'], "%d%m%Y", "%d/%m/%Y")
-            #print(f'Converted DOB: {converted_dob}')
-
-
-
-            # Fill in patient details in the web form
+            # Convert and fill patient details
+            converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%d/%m/%Y")
 
             await page1.get_by_role("button", name="Accept").click()
-            await page1.get_by_placeholder("Surname [space] First name").fill(f'{patient["family_name"]} {patient["given_name"]}')  #surname space firstname
+            await page1.get_by_placeholder("Surname [space] First name").fill(f'{patient.family_name} {patient.given_name}')
             await page1.get_by_placeholder("Birth Date (Required)").click()
             await page1.get_by_placeholder("Birth Date (Required)").fill(converted_dob)
             await page1.get_by_role("button", name="Search").click()
-            
 
-
-
-            print("4cyte Pathology paused for interaction")
+            print("4Cyte Pathology paused for interaction")
 
             while not shared_state.get("exit", False):
                 await asyncio.sleep(0.1)   
-            print("4cyte received exit signal")
+            print("4Cyte Pathology received exit signal")
     
             # Close the browser context and the browser
             await context.close()
             await browser.close()
-
-
-

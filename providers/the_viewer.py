@@ -5,8 +5,8 @@ import time
 import asyncio
 import re
 import queue
-
 import threading
+from typing import Dict, Any
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -16,11 +16,10 @@ from aioconsole import ainput
 from playwright._impl._errors import TimeoutError
 
 from utils import *
+from models import PatientDetails
 
 
-# The viewer using a QGov login
-
-async def run_QGov_Viewer_process(patient, shared_state):
+async def run_QGov_Viewer_process(patient: PatientDetails, shared_state: Dict[str, Any]):
     async with async_playwright() as playwright:
         # Load credentials for the QGov process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -71,28 +70,22 @@ async def run_QGov_Viewer_process(patient, shared_state):
         # Fill in patient details in the web form
 
         await page.locator("#MedicareNumber").click()
-        await page.locator("#MedicareNumber").fill(patient["medicare_number"])
+        await page.locator("#MedicareNumber").fill(patient.medicare_number)
 
-        # change gender into the correct format  M="1", F="2", Indeterminate = "3"
-        gender = convert_gender(patient["sex"], "M1F2I3")
-        # print (f'Gender: {gender}')
+        # Change gender into the correct format M="1", F="2", Indeterminate="3"
+        gender = convert_gender(patient.sex, "M1F2I3")
         await page.get_by_label("Sex").select_option(gender)
 
-        #
-
-        # Convert the patient's date of birth to the required format
+        # Convert and fill date of birth
         converted_dob = convert_date_format(
-            patient['dob'], "%d%m%Y", "%d/%m/%Y")
-        # print(converted_dob)
+            patient.dob, "%d%m%Y", "%d/%m/%Y")
 
-        # Fill in the date of birth field
         await page.get_by_placeholder("DD/MM/YYYY").click()
         await page.get_by_placeholder("DD/MM/YYYY").fill(converted_dob)
         await page.get_by_placeholder("DD/MM/YYYY").press("Tab")
 
         await page.get_by_label("Patient Surname").click()
-
-        await page.get_by_label("Patient Surname").fill(patient["family_name"])
+        await page.get_by_label("Patient Surname").fill(patient.family_name)
         await page.get_by_role("button", name="Search").click()
 
         # Function to handle popup interaction
@@ -128,32 +121,9 @@ async def run_QGov_Viewer_process(patient, shared_state):
 
         while not shared_state.get("exit", False):
             await asyncio.sleep(0.1)
-
-
-'''
-
-        # Handle popup using the expect_popup context manager
-        print("Waiting for popup")
-        try:
-            with page.expect_popup() as page1_info:
-                await page.get_by_role("link", name="The Viewer").click()
-            page1 = page1_info.value
-            await page1.wait_for_load_state()
-            # Perform necessary actions on the popup
-            # ...
-        except TimeoutError:
-            print("Timeout occurred while trying to click 'The Viewer' link.")
-
-        print("QGov The Viewer paused for interaction")
-
-        while not shared_state.get("exit", False):
-            await asyncio.sleep(0.1)
-
-
+            
         print("QGov The Viewer received exit instruction")
 
         # Close the browser context and the browser
         await context.close()
         await browser.close()
-
-'''

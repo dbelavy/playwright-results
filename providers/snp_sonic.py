@@ -5,8 +5,8 @@ import time
 import asyncio
 import re
 import queue
-
 import threading
+from typing import Dict, Any
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -15,12 +15,10 @@ from pynput import keyboard
 from aioconsole import ainput
 
 from utils import *
+from models import PatientDetails
 
 
-
-
-
-async def run_SNP_process(patient, shared_state):
+async def run_SNP_process(patient: PatientDetails, shared_state: Dict[str, Any]):
     async with async_playwright() as playwright:
         # Load credentials for the SNP process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -69,16 +67,14 @@ async def run_SNP_process(patient, shared_state):
 
         await page.get_by_role("link", name="Search", exact=True).click()
         await page.locator("#familyName").click()
-        await page.locator("#familyName").fill(patient["family_name"])
+        await page.locator("#familyName").fill(patient.family_name)
         await page.locator("#familyName").press("Tab")
-        #<input _ngcontent-ng-c2346702383="" type="text" id="familyName" placeholder="" name="Surname" class="form-control ng-valid ng-dirty ng-touched">
-        await page.locator("#givenName").fill(patient["given_name"])
-        #<input _ngcontent-ng-c2346702383="" type="text" id="givenName" placeholder="" name="GivenName" class="form-control ng-pristine ng-valid ng-touched">
+        await page.locator("#givenName").fill(patient.given_name)
         await page.locator("#givenName").press("Tab")
         await page.get_by_label("Sex").press("Tab")
         
         # Convert the patient's date of birth to the required format
-        converted_dob = convert_date_format(patient['dob'], "%d%m%Y", "%d/%m/%Y")
+        converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%d/%m/%Y")
         #print(f'Converted DOB:{converted_dob}')
 
         # Fill in the date of birth field
@@ -97,5 +93,3 @@ async def run_SNP_process(patient, shared_state):
         # Close the browser context and the browser
         await context.close()
         await browser.close()
-
-

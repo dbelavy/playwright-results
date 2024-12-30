@@ -7,8 +7,8 @@ import time
 import asyncio
 import re
 import queue
-
 import threading
+from typing import Dict, Any
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -17,13 +17,10 @@ from pynput import keyboard
 from aioconsole import ainput
 
 from utils import *
+from models import PatientDetails
 
 
-
-
-
-
-async def run_QScript_process(patient_details, shared_state):
+async def run_QScript_process(patient: PatientDetails, shared_state: Dict[str, Any]):
     async with async_playwright() as playwright:        
         # Load credentials for the QScript process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -40,7 +37,7 @@ async def run_QScript_process(patient_details, shared_state):
         #print(f"Credentials are {username}, {password}, and {pin}")
         
         # Print patient details
-        print(f"Patient details are: {patient_details}")
+        print(f"QS Patient details are: {patient}")
     
         browser = await playwright.firefox.launch(headless=False)
         context = await browser.new_context()
@@ -119,21 +116,14 @@ async def run_QScript_process(patient_details, shared_state):
         #print("Clicking on the first name input field...")
         await page.locator("[data-test-id=\"patientSearchFirstName\"]").click()
 
-        #print(f"Filling in the patient's given name")
-        await page.locator("[data-test-id=\"patientSearchFirstName\"]").fill(patient_details['given_name'])
-
-        #print("Moving to the next field (surname)...")
+        # Fill in patient details
+        await page.locator("[data-test-id=\"patientSearchFirstName\"]").fill(patient.given_name)
         await page.locator("[data-test-id=\"patientSearchFirstName\"]").press("Tab")
-
-        #print(f"Filling in the patient's family name")
-        await page.locator("[data-test-id=\"patientSearchSurname\"]").fill(patient_details['family_name'])
-
-        #print("Moving to the date of birth field...")
+        await page.locator("[data-test-id=\"patientSearchSurname\"]").fill(patient.family_name)
         await page.locator("[data-test-id=\"patientSearchSurname\"]").press("Tab")
 
-        # Converting the date format
-        #print("Converting the date of birth format...")
-        converted_dob = convert_date_format(patient_details['dob'], "%d%m%Y", "%d/%m/%Y")
+        # Convert and fill date of birth
+        converted_dob = convert_date_format(patient.dob, "%d%m%Y", "%d/%m/%Y")
         #print(f"Converted DOB: {converted_dob}")
 
         #print("Filling in the date of birth...")
@@ -154,5 +144,3 @@ async def run_QScript_process(patient_details, shared_state):
 
         await context.close()
         await browser.close()
-
-
