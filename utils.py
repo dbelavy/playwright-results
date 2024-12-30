@@ -5,9 +5,9 @@ import time
 import asyncio
 import re
 import queue
-
 import pyotp
 import threading
+from models import SharedState
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -18,7 +18,7 @@ from aioconsole import ainput
 
 
 
-async def process_inputs(input_queue, shared_state):
+async def process_inputs(input_queue, shared_state: SharedState):
     while True:
         if not input_queue.empty():
             user_input = input_queue.get()
@@ -30,18 +30,18 @@ async def process_inputs(input_queue, shared_state):
                 code_number = match.group(2)  # 6-digit number
                 if code_type == 'Q':
                     print(f"Received 2FA code for QScript: {code_number}")
-                    shared_state["QScript_code"] = code_number
+                    shared_state.QScript_code = code_number
                 elif code_type == 'P':
                     print(f"Received 2FA code for PRODA: {code_number}")
-                    shared_state["PRODA_code"] = code_number
+                    shared_state.PRODA_code = code_number
                 elif code_type == 'F':
                     print(f"Received 2FA code for 4Cyte: {code_number}")
-                    shared_state["4Cyte_code"] = code_number
+                    shared_state.FourCyte_code = code_number
             
             # Check for 'x' to quit
             elif user_input.lower() == 'x':
                 print("Received Quitting instruction...")
-                shared_state["exit"] = True
+                shared_state.exit = True
                 break
 
         await asyncio.sleep(0.1)
@@ -62,10 +62,10 @@ def input_thread(input_queue):
 
 
 # Function to load credentials from a JSON file
-def load_credentials(shared_state, company):
+def load_credentials(shared_state: SharedState, company: str):
     try:
         # Open and read the JSON file
-        file_path = shared_state["credentials_file"]
+        file_path = shared_state.credentials_file
         with open(file_path, 'r') as file:
             data = json.load(file)
 
@@ -141,5 +141,3 @@ def convert_date_format(date_string, input_format, output_format):
     except ValueError:
         print("Invalid date format.")
         return None
-
-

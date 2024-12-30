@@ -7,19 +7,18 @@ import asyncio
 import re
 import queue
 import threading
-from typing import Dict, Any
-
 from playwright.sync_api import Playwright, sync_playwright, expect
+from models import PatientDetails, SharedState
 from datetime import datetime
 from playwright.async_api import async_playwright
 from pynput import keyboard
 from aioconsole import ainput
 
 from utils import *
-from models import PatientDetails
 
 
-async def run_myHealthRecord_process(patient: PatientDetails, shared_state: Dict[str, Any]):
+
+async def run_myHealthRecord_process(patient: PatientDetails, shared_state: SharedState):
     async with async_playwright() as playwright:        
         # Load credentials for the myHR process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -55,13 +54,12 @@ async def run_myHealthRecord_process(patient: PatientDetails, shared_state: Dict
         
         # Wait for the 2FA code to be entered from the Queue
         print("Please enter 2FA for PRODA starting with a P. eg P123456 \n")
-        while not shared_state["PRODA_code"]:
-            
+        while not shared_state.PRODA_code:
             await asyncio.sleep(1)  # Check for the 2FA code every second
 
         # Once the 2FA code is available, use it
-        two_fa_code = shared_state["PRODA_code"]
-        shared_state["PRODA_code"]=None
+        two_fa_code = shared_state.PRODA_code
+        shared_state.PRODA_code = None
         
 
         await page.get_by_label("Enter Code").click()
@@ -117,7 +115,7 @@ async def run_myHealthRecord_process(patient: PatientDetails, shared_state: Dict
         await page.get_by_role("button", name="Search").click()
         print("My Health Record paused for interaction")
 
-        while not shared_state.get("exit", False):
+        while not shared_state.exit:
             await asyncio.sleep(0.1)
 
         print("My Health Record received exit signal")

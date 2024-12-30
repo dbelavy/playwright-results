@@ -3,6 +3,15 @@ from datetime import datetime
 from typing import Optional
 
 @dataclass
+class SharedState:
+    QScript_code: Optional[str] = None
+    PRODA_code: Optional[str] = None
+    FourCyte_code: Optional[str] = None  # Changed from 4Cyte_code to be a valid Python identifier
+    paused: bool = True
+    exit: bool = False
+    credentials_file: str = "credentials.json"
+
+@dataclass
 class PatientDetails:
     family_name: str
     given_name: Optional[str] = None

@@ -6,9 +6,9 @@ import asyncio
 import re
 import queue
 import threading
-from typing import Dict, Any, Optional
-
 from playwright.sync_api import Playwright, sync_playwright, expect
+from typing import Optional
+from models import PatientDetails, SharedState
 from datetime import datetime
 from playwright.async_api import async_playwright
 from pynput import keyboard
@@ -18,7 +18,7 @@ from utils import *
 from models import PatientDetails
 
 
-async def run_meditrust_process(patient: Optional[PatientDetails], shared_state: Dict[str, Any]):
+async def run_meditrust_process(patient: Optional[PatientDetails], shared_state: SharedState):
     async with async_playwright() as playwright:
         # Load credentials for the process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -54,7 +54,7 @@ async def run_meditrust_process(patient: Optional[PatientDetails], shared_state:
 
         print("Meditrust paused for interaction")
 
-        while not shared_state.get("exit", False):
+        while not shared_state.exit:
             await asyncio.sleep(0.1)   
         print("Meditrust received exit signal")
 

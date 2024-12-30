@@ -7,7 +7,7 @@ import re
 import queue
 import threading
 
-from models import PatientDetails
+from models import PatientDetails, SharedState
 
 from playwright.sync_api import Playwright, sync_playwright, expect
 from datetime import datetime
@@ -135,14 +135,7 @@ async def run_tasks(patient_details=None, selected_tasks=None):
 
     # Create a fresh queue and shared state for this run
     input_queue = queue.Queue()
-    shared_state = {
-        "QScript_code": None,
-        "PRODA_code": None,
-        "4Cyte_code": None,
-        "paused": True,
-        "exit": False,  # Reset for each run
-        "credentials_file": "credentials.json"
-    }
+    shared_state = SharedState()  # Initialize with default values
 
     # Start the input thread
     input_thread_instance = threading.Thread(

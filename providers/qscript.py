@@ -8,9 +8,8 @@ import asyncio
 import re
 import queue
 import threading
-from typing import Dict, Any
-
 from playwright.sync_api import Playwright, sync_playwright, expect
+from models import PatientDetails, SharedState
 from datetime import datetime
 from playwright.async_api import async_playwright
 from pynput import keyboard
@@ -20,7 +19,7 @@ from utils import *
 from models import PatientDetails
 
 
-async def run_QScript_process(patient: PatientDetails, shared_state: Dict[str, Any]):
+async def run_QScript_process(patient: PatientDetails, shared_state: SharedState):
     async with async_playwright() as playwright:        
         # Load credentials for the QScript process
         # Assuming load_credentials is a synchronous function, no await is needed
@@ -69,13 +68,12 @@ async def run_QScript_process(patient: PatientDetails, shared_state: Dict[str, A
 
         # Wait for the 2FA code to be entered from the Queue
         print("Please enter 2FA for QScript starting with a Q.\nmsverify: Use verification code ###### for QScript authentication.\n")
-        while not shared_state["QScript_code"]:
-            
+        while not shared_state.QScript_code:
             await asyncio.sleep(1)  # Check for the 2FA code every second
 
         # Once the 2FA code is available, use it
-        two_fa_code = shared_state["QScript_code"]
-        shared_state["QScript_code"]=None
+        two_fa_code = shared_state.QScript_code
+        shared_state.QScript_code = None
         await page.get_by_placeholder("Verification code").fill(two_fa_code)
         await page.get_by_role("button", name="Verify").click()
 
@@ -135,7 +133,7 @@ async def run_QScript_process(patient: PatientDetails, shared_state: Dict[str, A
 
         print("QScript paused for interaction")
 
-        while not shared_state.get("exit", False):
+        while not shared_state.exit:
             await asyncio.sleep(0.1)
 
         print("QScript no longer paused")
