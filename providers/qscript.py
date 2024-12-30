@@ -37,7 +37,7 @@ class QScriptSession(Session):
         await self.page.get_by_label("Log In").click()
 
         # Handle 2FA
-        print("Please enter 2FA for QScript starting with a Q.\nmsverify: Use verification code ###### for QScript authentication.\n")
+        self.shared_state.new_2fa_request = "QScript"
         while not self.shared_state.QScript_code:
             await asyncio.sleep(1)
 

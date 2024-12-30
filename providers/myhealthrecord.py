@@ -33,7 +33,7 @@ class MyHealthRecordSession(Session):
         await self.page.wait_for_load_state("networkidle")
 
         # Handle 2FA
-        print("Please enter 2FA for PRODA starting with a P. eg P123456 \n")
+        self.shared_state.new_2fa_request = "PRODA"
         while not self.shared_state.PRODA_code:
             await asyncio.sleep(1)  # Check for the 2FA code every second
 
