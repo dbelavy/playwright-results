@@ -4,21 +4,19 @@ from utils import load_credentials, convert_date_format
 from typing import Optional
 import asyncio
 
-# Define provider metadata at module level
-REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
-PROVIDER_GROUP = "Radiology"
-CREDENTIALS_KEY = "QXR"  # Matches the key in credentials.json
-
 class QXRSession(Session):
     name = "QXR"  # Make name a class attribute
+    required_fields = ['family_name', 'given_name', 'dob']
+    provider_group = "Radiology"
+    credentials_key = "QXR"
     
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__(self.name, credentials, patient, shared_state)
+        super().__init__(credentials, patient, shared_state)
 
     @classmethod
     def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['QXRSession']:
         """Create a new QXR session"""
-        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
+        return super().create(patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""

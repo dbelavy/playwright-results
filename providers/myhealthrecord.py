@@ -4,21 +4,19 @@ from utils import load_credentials, convert_date_format
 from typing import Optional
 import asyncio
 
-# Define provider metadata at module level
-REQUIRED_FIELDS = ['family_name', 'dob', 'medicare_number', 'sex']
-PROVIDER_GROUP = "General"
-CREDENTIALS_KEY = "PRODA"  # Matches the key in credentials.json
-
 class MyHealthRecordSession(Session):
     name = "My Health Record"  # Make name a class attribute
+    required_fields = ['family_name', 'dob', 'medicare_number', 'sex']
+    provider_group = "General"
+    credentials_key = "PRODA"
     
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__(self.name, credentials, patient, shared_state)
+        super().__init__(credentials, patient, shared_state)
 
     @classmethod
     def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['MyHealthRecordSession']:
         """Create a new My Health Record session"""
-        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
+        return super().create(patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""

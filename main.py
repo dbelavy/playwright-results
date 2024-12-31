@@ -57,32 +57,35 @@ def load_providers():
             module_name = f'providers.{file_path.stem}'
             module = importlib.import_module(module_name)
             
+            # Find the session class first
+            session_class = next(
+                (obj for _, obj in inspect.getmembers(module, inspect.isclass) 
+                 if obj.__name__.endswith('Session')), 
+                None
+            )
+            if not session_class:
+                continue
+
             # Find the process function
-            for name, func in inspect.getmembers(module, inspect.isfunction):
-                if name.endswith('_process'):
-                    # Get provider name from the session class
-                    module_name = f'providers.{file_path.stem}'
-                    module = importlib.import_module(module_name)
-                    session_class = next(
-                        (obj for _, obj in inspect.getmembers(module, inspect.isclass) 
-                         if obj.__name__.endswith('Session')), 
-                        None
-                    )
-                    if session_class:
-                        provider_name = session_class.name
-                    
-                    # Check if provider has valid credentials
-                    creds_key = getattr(module, 'CREDENTIALS_KEY', provider_name.replace(' ', ''))
-                    if (creds_key in credentials and 
-                        isinstance(credentials[creds_key], dict) and
-                        'user_name' in credentials[creds_key] and
-                        credentials[creds_key]['user_name'] != 'your_username'):
-                        
-                        # Get required fields and group from module
-                        required_fields = getattr(module, 'REQUIRED_FIELDS', [])
-                        provider_group = getattr(module, 'PROVIDER_GROUP', 'Other')
-                        providers[provider_name] = (func, required_fields, provider_group)
-                    break
+            process_func = next(
+                (func for _, func in inspect.getmembers(module, inspect.isfunction)
+                 if func.__name__.endswith('_process')),
+                None
+            )
+            if not process_func:
+                continue
+
+            # Check if provider has valid credentials
+            if (session_class.credentials_key in credentials and 
+                isinstance(credentials[session_class.credentials_key], dict) and
+                'user_name' in credentials[session_class.credentials_key] and
+                credentials[session_class.credentials_key]['user_name'] != 'your_username'):
+                
+                providers[session_class.name] = (
+                    process_func, 
+                    session_class.required_fields,
+                    session_class.provider_group
+                )
                     
         except Exception as e:
             print(f"Error loading provider {file_path.stem}: {e}")

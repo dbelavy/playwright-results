@@ -134,8 +134,32 @@ class PatientDetails:
 
 class Session(ABC):
     """Base session class for handling provider interactions"""
-    def __init__(self, name: str, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        self.name = name
+    
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Provider display name"""
+        pass
+        
+    @property
+    @abstractmethod
+    def required_fields(self) -> list[str]:
+        """Required patient fields"""
+        pass
+        
+    @property
+    @abstractmethod
+    def provider_group(self) -> str:
+        """Provider group (e.g., 'Pathology', 'Radiology')"""
+        pass
+        
+    @property
+    @abstractmethod
+    def credentials_key(self) -> str:
+        """Key for credentials.json"""
+        pass
+
+    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
         self.credentials = credentials
         self.patient = patient
         self.shared_state = shared_state
@@ -144,12 +168,12 @@ class Session(ABC):
         self.page: Page | None = None
 
     @classmethod
-    def create(cls, name: str, credentials_key: str, patient: PatientDetails, shared_state: SharedState) -> Optional['Session']:
+    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['Session']:
         """Create a new session with loaded credentials"""
         from utils import load_credentials  # Import here to avoid circular dependency
-        credentials = load_credentials(shared_state, credentials_key)
+        credentials = load_credentials(shared_state, cls.credentials_key)
         if not credentials:
-            print(f"Failed to load {credentials_key} credentials")
+            print(f"Failed to load {cls.credentials_key} credentials")
             return None
         return cls(credentials, patient, shared_state)
 

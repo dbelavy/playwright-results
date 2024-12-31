@@ -4,21 +4,19 @@ from utils import load_credentials, generate_2fa_code
 from typing import Optional
 import asyncio
 
-# Define provider requirements at module level
-REQUIRED_FIELDS = []  # No patient details required
-PROVIDER_GROUP = "Other"
-CREDENTIALS_KEY = "Meditrust"  # Matches the key in credentials.json
-
 class MediTrustSession(Session):
     name = "MediTrust"  # Make name a class attribute
+    required_fields = []  # No patient details required
+    provider_group = "Other"
+    credentials_key = "Meditrust"
     
     def __init__(self, credentials: Credentials, patient: Optional[PatientDetails], shared_state: SharedState):
-        super().__init__(self.name, credentials, patient, shared_state)
+        super().__init__(credentials, patient, shared_state)
 
     @classmethod
     def create(cls, patient: Optional[PatientDetails], shared_state: SharedState) -> Optional['MediTrustSession']:
         """Create a new MediTrust session"""
-        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
+        return super().create(patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""

@@ -5,21 +5,19 @@ from playwright._impl._errors import TimeoutError
 from typing import Optional
 import asyncio
 
-# Define provider metadata at module level
-REQUIRED_FIELDS = ['family_name', 'dob', 'medicare_number', 'sex']
-PROVIDER_GROUP = "General"
-CREDENTIALS_KEY = "QGov"  # Matches the key in credentials.json
-
 class QGovViewerSession(Session):
     name = "QGov Viewer"  # Make name a class attribute
+    required_fields = ['family_name', 'dob', 'medicare_number', 'sex']
+    provider_group = "General"
+    credentials_key = "QGov"
     
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__(self.name, credentials, patient, shared_state)
+        super().__init__(credentials, patient, shared_state)
 
     @classmethod
     def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['QGovViewerSession']:
         """Create a new QGov Viewer session"""
-        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
+        return super().create(patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
