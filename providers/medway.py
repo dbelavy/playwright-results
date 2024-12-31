@@ -1,19 +1,29 @@
-from playwright.async_api import Playwright, async_playwright
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format
 from typing import Optional
+
+from playwright.async_api import Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format
+
 
 class MedwaySession(Session):
     name = "Medway"  # Make name a class attribute
-    required_fields = ['family_name', 'given_name', 'dob']
+    required_fields = ["family_name", "given_name", "dob"]
     provider_group = "Pathology"
     credentials_key = "Medway"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['MedwaySession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["MedwaySession"]:
         """Create a new Medway session"""
         return super().create(patient, shared_state)
 
@@ -28,7 +38,7 @@ class MedwaySession(Session):
         """Handle login process"""
         if not self.page:
             raise RuntimeError("Session not initialized")
-            
+
         await self.page.get_by_label("Username").click()
         await self.page.get_by_label("Username").fill(self.credentials.user_name)
         await self.page.get_by_label("Password").click()
@@ -40,15 +50,16 @@ class MedwaySession(Session):
         """Handle patient search"""
         if not self.page:
             raise RuntimeError("Session not initialized")
-            
+
         await self.page.get_by_label("Patient surname").click()
         await self.page.get_by_label("Patient surname").fill(self.patient.family_name)
         await self.page.get_by_label("Patient surname").press("Tab")
         await self.page.get_by_label("Patient given name(s)").click()
-        await self.page.get_by_label("Patient given name(s)").fill(self.patient.given_name)
+        given_name_field = self.page.get_by_label("Patient given name(s)")
+        await given_name_field.fill(self.patient.given_name)
         await self.page.get_by_label("Patient given name(s)").press("Tab")
 
-        # Keep this code just in case we change things later. 
+        # Keep this code just in case we change things later.
         # It can cause issues if the medicare number is wrong. Trying to use minimum dataset.
         # if self.patient.medicare_number is not None:
         #    medicare_field = self.page.get_by_placeholder("digit Medicare number")
@@ -62,6 +73,7 @@ class MedwaySession(Session):
 
         # Initiate search
         await self.page.get_by_role("button", name="Search").click()
+
 
 async def Medway_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session

@@ -1,21 +1,30 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format, convert_gender
-from playwright._impl._errors import TimeoutError
 from typing import Optional
-import asyncio
+
+from playwright._impl._errors import TimeoutError
+from playwright.async_api import Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format, convert_gender
+
 
 class QGovViewerSession(Session):
     name = "QGov Viewer"  # Make name a class attribute
-    required_fields = ['family_name', 'dob', 'medicare_number', 'sex']
+    required_fields = ["family_name", "dob", "medicare_number", "sex"]
     provider_group = "General"
     credentials_key = "QGov"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['QGovViewerSession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["QGovViewerSession"]:
         """Create a new QGov Viewer session"""
         return super().create(patient, shared_state)
 
@@ -33,17 +42,21 @@ class QGovViewerSession(Session):
             raise RuntimeError("Session not initialized")
 
         # Wait for and click login link
-        await self.page.wait_for_selector('a:text("Log in")', state='visible')
+        await self.page.wait_for_selector('a:text("Log in")', state="visible")
         await self.page.get_by_role("link", name="Log in").click()
 
         # Wait for email field and fill credentials
-        await self.page.wait_for_selector('input[placeholder="Your email address"]', state='visible')
-        await self.page.get_by_placeholder("Your email address").fill(self.credentials.user_name)
-        
+        await self.page.wait_for_selector(
+            'input[placeholder="Your email address"]', state="visible"
+        )
+        await self.page.get_by_placeholder("Your email address").fill(
+            self.credentials.user_name
+        )
+
         # Wait for password field and fill
-        await self.page.wait_for_selector('input[type="password"]', state='visible')
+        await self.page.wait_for_selector('input[type="password"]', state="visible")
         await self.page.get_by_label("Password").fill(self.credentials.user_password)
-        
+
         # Click login and wait for navigation
         await self.page.get_by_role("button", name="Log in").click()
         await self.page.wait_for_load_state("domcontentloaded")
@@ -54,7 +67,7 @@ class QGovViewerSession(Session):
             raise RuntimeError("Session not initialized")
 
         # Wait for Medicare field and fill
-        await self.page.wait_for_selector('#MedicareNumber', state='visible')
+        await self.page.wait_for_selector("#MedicareNumber", state="visible")
         await self.page.locator("#MedicareNumber").fill(self.patient.medicare_number)
 
         # Handle gender selection with conversion
@@ -84,6 +97,7 @@ class QGovViewerSession(Session):
             await self.page.get_by_role("link", name="The Viewer").click(timeout=30000)
         except TimeoutError:
             print("Timeout occurred while trying to click 'The Viewer' link.")
+
 
 async def QGovViewer_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session

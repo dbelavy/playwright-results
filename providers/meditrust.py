@@ -1,20 +1,29 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, generate_2fa_code
 from typing import Optional
-import asyncio
+
+from playwright.async_api import Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import generate_2fa_code
+
 
 class MediTrustSession(Session):
     name = "MediTrust"  # Make name a class attribute
     required_fields = []  # No patient details required
     provider_group = "Other"
     credentials_key = "Meditrust"
-    
-    def __init__(self, credentials: Credentials, patient: Optional[PatientDetails], shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: Optional[PatientDetails],
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: Optional[PatientDetails], shared_state: SharedState) -> Optional['MediTrustSession']:
+    def create(
+        cls, patient: Optional[PatientDetails], shared_state: SharedState
+    ) -> Optional["MediTrustSession"]:
         """Create a new MediTrust session"""
         return super().create(patient, shared_state)
 
@@ -48,7 +57,10 @@ class MediTrustSession(Session):
         """No patient search needed for MediTrust"""
         pass
 
-async def MediTrust_process(patient: Optional[PatientDetails], shared_state: SharedState):
+
+async def MediTrust_process(
+    patient: Optional[PatientDetails], shared_state: SharedState
+):
     # Create and run session
     session = MediTrustSession.create(patient, shared_state)
     if not session:

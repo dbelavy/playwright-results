@@ -241,13 +241,12 @@ async def run_tasks(patient_details=None, selected_providers=None):
     except asyncio.CancelledError:
         print("Tasks cancelled during shutdown.")
 
-    # Cleanup
-    for task in tasks:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+    # Cleanup - only cancel input task since provider tasks are already done
+    input_task.cancel()
+    try:
+        await input_task
+    except asyncio.CancelledError:
+        pass
 
     print("quitting input thread...")
     input_thread_instance.join()

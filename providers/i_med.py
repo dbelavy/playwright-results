@@ -1,21 +1,31 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format
-from typing import Optional
 import asyncio
+from typing import Optional
+
+from playwright.async_api import Page, Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format
+
 
 class IMedSession(Session):
     name = "IMed"  # Make name a class attribute
-    required_fields = ['family_name', 'given_name', 'dob']
+    required_fields = ["family_name", "given_name", "dob"]
     provider_group = "Radiology"
     credentials_key = "IMed"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
         self.active_page: Page | None = None  # For handling popup window
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['IMedSession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["IMedSession"]:
         """Create a new IMed session"""
         return super().create(patient, shared_state)
 
@@ -46,24 +56,28 @@ class IMedSession(Session):
 
         # Add a small delay to ensure popup is ready
         await asyncio.sleep(2)
-        
+
         # Fill in login credentials using data-testid selectors
-        await self.active_page.locator('[data-testid="SingleLineTextInputField-FormControl"][name="uid"]').fill(self.credentials.user_name)
-        await self.active_page.locator('[data-testid="SingleLineTextInputField-FormControl"][name="password"]').fill(self.credentials.user_password)
+        await self.active_page.locator(
+            '[data-testid="SingleLineTextInputField-FormControl"][name="uid"]'
+        ).fill(self.credentials.user_name)
+        await self.active_page.locator(
+            '[data-testid="SingleLineTextInputField-FormControl"][name="password"]'
+        ).fill(self.credentials.user_password)
         await self.active_page.get_by_test_id("login-button").click()
-     
+
         # Wait for the search page and check available elements
         await self.active_page.wait_for_load_state("networkidle")
-        
-        print("After login - checking available elements...")
-        elements = await self.active_page.evaluate("""() => {
+
+        # Wait for page to be ready and verify elements
+        await self.active_page.wait_for_load_state("networkidle")
+        await self.active_page.evaluate(
+            """() => {
+            // Verify critical elements are present
             const elements = document.querySelectorAll('[data-testid]');
-            return Array.from(elements).map(el => ({
-                testId: el.getAttribute('data-testid'),
-                type: el.getAttribute('type'),
-                name: el.getAttribute('name')
-            }));
-        }""")
+            return elements.length > 0;
+        }"""
+        )
 
     async def search_patient(self) -> None:
         """Handle patient search"""
@@ -74,31 +88,48 @@ class IMedSession(Session):
         try:
             # Try by placeholder or label if it exists
             # Use the exact field attributes we found
-            await self.active_page.locator('[data-testid="SingleLineTextInputField-FormControl"][name="nameOrPatientId"]').fill(f'{self.patient.given_name} {self.patient.family_name}')
+            await self.active_page.locator(
+                '[data-testid="SingleLineTextInputField-FormControl"][name="nameOrPatientId"]'
+            ).fill(f"{self.patient.given_name} {self.patient.family_name}")
 
             # For DOB, use the exact test ID we found
-            await self.active_page.get_by_test_id("DOB-input-field-form-control").click()
-            await self.active_page.get_by_test_id("DOB-input-field-form-control").type(convert_date_format(self.patient.dob, "%d%m%Y", "%d/%m/%Y"))
+            await self.active_page.get_by_test_id(
+                "DOB-input-field-form-control"
+            ).click()
+            await self.active_page.get_by_test_id("DOB-input-field-form-control").type(
+                convert_date_format(self.patient.dob, "%d%m%Y", "%d/%m/%Y")
+            )
 
-        except:
+        except Exception as e:
+            print(f"Primary selector failed: {str(e)}")
             try:
                 # Try by role
-                await self.active_page.get_by_role("textbox", name="Patient Name").fill(f'{self.patient.given_name} {self.patient.family_name}')
-            except:
-                # If all else fails, try waiting and using a more specific selector
-                await self.active_page.wait_for_selector('input[type="text"][data-testid="SingleLineTextInputField-FormControl"]')
-                await self.active_page.locator('input[type="text"][data-testid="SingleLineTextInputField-FormControl"]').first.fill(
-                    f'{self.patient.given_name} {self.patient.family_name}'
+                await self.active_page.get_by_role("textbox", name="Patient Name").fill(
+                    f"{self.patient.given_name} {self.patient.family_name}"
                 )
+            except Exception as e:
+                print(f"Secondary selector failed: {str(e)}")
+                # If all else fails, try waiting and using a more specific selector
+                await self.active_page.wait_for_selector(
+                    'input[type="text"][data-testid="SingleLineTextInputField-FormControl"]'
+                )
+                await self.active_page.locator(
+                    'input[type="text"][data-testid="SingleLineTextInputField-FormControl"]'
+                ).first.fill(f"{self.patient.given_name} {self.patient.family_name}")
 
         # Request everything available
         await self.active_page.get_by_role("button", name="Referred by me").click()
         await self.active_page.get_by_role("button", name="Referred by anyone").click()
-        await self.active_page.get_by_role("button", name="All listed practices").click()
-        await self.active_page.get_by_role("button", name="All listed practices").click()
+        await self.active_page.get_by_role(
+            "button", name="All listed practices"
+        ).click()
+        await self.active_page.get_by_role(
+            "button", name="All listed practices"
+        ).click()
         await self.active_page.get_by_role("button", name="Past week").click()
         await self.active_page.get_by_role("button", name="All time").click()
         await self.active_page.get_by_test_id("mobile-search").click()
+
 
 async def IMed_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session

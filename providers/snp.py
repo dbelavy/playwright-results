@@ -1,19 +1,29 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format
 from typing import Optional
+
+from playwright.async_api import Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format
+
 
 class SNPSession(Session):
     name = "SNP"  # Make name a class attribute
-    required_fields = ['family_name', 'given_name', 'dob']
+    required_fields = ["family_name", "given_name", "dob"]
     provider_group = "Pathology"
     credentials_key = "Sonic"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['SNPSession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["SNPSession"]:
         """Create a new SNP session"""
         return super().create(patient, shared_state)
 
@@ -34,7 +44,7 @@ class SNPSession(Session):
         await self.page.locator("#username").click()
         await self.page.locator("#username").fill(self.credentials.user_name)
         await self.page.locator("#selected-business").select_option("SNP")
-        
+
         # Fill password and login
         await self.page.locator("#password").click()
         await self.page.locator("#password").fill(self.credentials.user_password)
@@ -48,7 +58,7 @@ class SNPSession(Session):
 
         # Navigate to search page
         await self.page.get_by_role("link", name="Search", exact=True).click()
-        
+
         # Fill patient details
         await self.page.locator("#familyName").click()
         await self.page.locator("#familyName").fill(self.patient.family_name)
@@ -63,6 +73,7 @@ class SNPSession(Session):
 
         # Initiate search
         await self.page.get_by_role("button", name="Search").click()
+
 
 async def SNP_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session

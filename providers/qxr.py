@@ -1,20 +1,29 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format
 from typing import Optional
-import asyncio
+
+from playwright.async_api import Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format
+
 
 class QXRSession(Session):
     name = "QXR"  # Make name a class attribute
-    required_fields = ['family_name', 'given_name', 'dob']
+    required_fields = ["family_name", "given_name", "dob"]
     provider_group = "Radiology"
     credentials_key = "QXR"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['QXRSession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["QXRSession"]:
         """Create a new QXR session"""
         return super().create(patient, shared_state)
 
@@ -34,17 +43,19 @@ class QXRSession(Session):
             raise RuntimeError("Session not initialized")
 
         # print(f"Attempting login with username: {self.credentials.user_name}")
-        
+
         # Username entry
         # print("Entering username...")
         await self.page.get_by_placeholder("Username").click()
         await self.page.get_by_placeholder("Username").fill(self.credentials.user_name)
-        
+
         # Password entry
         # print("Entering password...")
         await self.page.get_by_placeholder("Password").click()
-        await self.page.get_by_placeholder("Password").fill(self.credentials.user_password)
-        
+        await self.page.get_by_placeholder("Password").fill(
+            self.credentials.user_password
+        )
+
         # Submit login
         # print("Submitting login form...")
         await self.page.get_by_role("button").click()
@@ -60,20 +71,19 @@ class QXRSession(Session):
         # print(f"- Family Name: {self.patient.family_name}")
         # print(f"- Given Name: {self.patient.given_name}")
         # print(f"- DOB (raw): {self.patient.dob}")
-        
+
         # Click search field
         # print("\n1. Clicking search field...")
         await self.page.get_by_placeholder("Search patient name, id,").click()
         await self.page.wait_for_load_state("networkidle")
         # print("✓ Search field clicked")
-        
+
         # Enter patient name in format "surname,firstname"
         search_text = f"{self.patient.family_name}, {self.patient.given_name}"
         # print(f"\n2. Entering search text: {search_text}")
         await self.page.get_by_placeholder("Search patient name, id,").fill(search_text)
         await self.page.wait_for_load_state("networkidle")
         # print("✓ Search text entered")
-        
 
         # Handle DOB popup
         # print("\n3. Opening DOB popup...")
@@ -82,15 +92,15 @@ class QXRSession(Session):
             arrow = self.page.locator("div.arrow.arrow-up").first
             await arrow.wait_for(state="visible", timeout=5000)
             # print("✓ Found arrow")
-            
+
             # print("Clicking arrow...")
             await arrow.click()
             # print("✓ Clicked arrow")
-            
+
             # Add delay to visually verify popup
             # print("Waiting 3 seconds to verify popup...")
             await self.page.wait_for_timeout(1000)
-            
+
         except Exception as e:
             print(f"\n❌ Error clicking arrow: {str(e)}")
             await self.page.screenshot(path="qxr_error.png")
@@ -102,19 +112,19 @@ class QXRSession(Session):
         converted_dob = convert_date_format(raw_dob, "%d%m%Y", "%d/%m/%Y")
         # print(f"- Input DOB: {raw_dob}")
         # print(f"- Converted DOB: {converted_dob}")
-        
+
         # Wait for and enter DOB
         # print("\n5. Entering DOB...")
         # print("Waiting for DOB field...")
         dob_field = self.page.get_by_placeholder("DD/MM/YYYY")
         await dob_field.wait_for(state="visible", timeout=5000)
         # print("✓ DOB field found")
-        
+
         await dob_field.click()
         await dob_field.fill(converted_dob)
         await self.page.wait_for_timeout(1000)
         # print(f"✓ DOB entered: {converted_dob}")
-        
+
         # Wait for and click search button
         # print("\n6. Submitting search...")
         try:
@@ -122,7 +132,7 @@ class QXRSession(Session):
             search_button = self.page.get_by_role("button").nth(1)
             await search_button.wait_for(state="visible", timeout=5000)
             # print("✓ Search button found")
-            
+
             await search_button.click()
             await self.page.wait_for_load_state("networkidle")
             # print("✓ Search submitted")
@@ -130,7 +140,7 @@ class QXRSession(Session):
             print(f"\n❌ Error clicking search button: {str(e)}")
             await self.page.screenshot(path="qxr_search_error.png")
             raise
-        
+
 
 async def QXR_process(patient: PatientDetails, shared_state: SharedState):
     """Main entry point for QXR provider"""

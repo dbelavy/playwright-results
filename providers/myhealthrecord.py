@@ -1,20 +1,30 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format
-from typing import Optional
 import asyncio
+from typing import Optional
+
+from playwright.async_api import Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format
+
 
 class MyHealthRecordSession(Session):
     name = "My Health Record"  # Make name a class attribute
-    required_fields = ['family_name', 'dob', 'medicare_number', 'sex']
+    required_fields = ["family_name", "dob", "medicare_number", "sex"]
     provider_group = "General"
     credentials_key = "PRODA"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['MyHealthRecordSession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["MyHealthRecordSession"]:
         """Create a new My Health Record session"""
         return super().create(patient, shared_state)
 
@@ -23,7 +33,9 @@ class MyHealthRecordSession(Session):
         self.browser = await playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
         self.page = await self.context.new_page()
-        await self.page.goto("https://proda.humanservices.gov.au/prodalogin/pages/public/login.jsf?TAM_OP=login&USER")
+        await self.page.goto(
+            "https://proda.humanservices.gov.au/prodalogin/pages/public/login.jsf?TAM_OP=login&USER"
+        )
         await self.page.wait_for_load_state("networkidle")
 
     async def login(self) -> None:
@@ -35,7 +47,9 @@ class MyHealthRecordSession(Session):
         await self.page.get_by_label("Username").click()
         await self.page.get_by_label("Username").fill(self.credentials.user_name)
         await self.page.get_by_label("Password", exact=True).click()
-        await self.page.get_by_label("Password", exact=True).fill(self.credentials.user_password)
+        await self.page.get_by_label("Password", exact=True).fill(
+            self.credentials.user_password
+        )
         await self.page.get_by_role("button", name="Login", exact=True).click()
         await self.page.wait_for_load_state("networkidle")
 
@@ -49,9 +63,9 @@ class MyHealthRecordSession(Session):
 
         await self.page.get_by_label("Enter Code").click()
         await self.page.get_by_label("Enter Code").fill(two_fa_code)
-        print("MyHR waiting for click the 2FA \"Next\" button")
+        print('MyHR waiting for click the 2FA "Next" button')
         await asyncio.sleep(0.2)
-        await self.page.keyboard.press('Enter')
+        await self.page.keyboard.press("Enter")
 
         # Navigate to MyHealthRecord
         print("Clicking through to my health record")
@@ -59,10 +73,12 @@ class MyHealthRecordSession(Session):
         await self.page.wait_for_load_state("networkidle")
 
         # Select provider
-        await self.page.click(f'input[name="radio1"][value="{self.credentials.PRODA_full_name}"]')
-        await self.page.wait_for_selector('input#submitValue', state='visible')
+        await self.page.click(
+            f'input[name="radio1"][value="{self.credentials.PRODA_full_name}"]'
+        )
+        await self.page.wait_for_selector("input#submitValue", state="visible")
         await self.page.wait_for_load_state("networkidle")
-        await self.page.click('input#submitValue')
+        await self.page.click("input#submitValue")
 
         # Added pause between pages to prevent failures
         await asyncio.sleep(5)
@@ -74,7 +90,7 @@ class MyHealthRecordSession(Session):
             raise RuntimeError("Session not initialized")
 
         print("Filling in patient details")
-        
+
         # Fill family name using query selector for reliability
         element_handle = await self.page.query_selector("#lname")
         await element_handle.click()
@@ -94,14 +110,17 @@ class MyHealthRecordSession(Session):
             await self.page.get_by_label("Intersex").check()
         else:
             await self.page.get_by_label("Not Stated").check()
-        
+
         # Fill Medicare details
         await self.page.get_by_label("Medicare").check()
         await self.page.get_by_placeholder("Medicare number with IRN").click()
-        await self.page.get_by_placeholder("Medicare number with IRN").fill(self.patient.medicare_number)
-        
+        await self.page.get_by_placeholder("Medicare number with IRN").fill(
+            self.patient.medicare_number
+        )
+
         # Initiate search
         await self.page.get_by_role("button", name="Search").click()
+
 
 async def MyHealthRecord_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session

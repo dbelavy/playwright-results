@@ -1,20 +1,30 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format, generate_2fa_code
 from typing import Optional
+
+from playwright.async_api import Page, Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format, generate_2fa_code
+
 
 class FourCyteSession(Session):
     name = "4Cyte"  # Make name a class attribute
-    required_fields = ['family_name', 'given_name', 'dob']
+    required_fields = ["family_name", "given_name", "dob"]
     provider_group = "Pathology"
     credentials_key = "4cyte"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
         self.active_page: Page | None = None  # For handling popup window
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['FourCyteSession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["FourCyteSession"]:
         """Create a new FourCyte session"""
         return super().create(patient, shared_state)
 
@@ -42,9 +52,13 @@ class FourCyteSession(Session):
 
         # Login in popup window
         await self.active_page.get_by_placeholder("Username").click()
-        await self.active_page.get_by_placeholder("Username").fill(self.credentials.user_name)
+        await self.active_page.get_by_placeholder("Username").fill(
+            self.credentials.user_name
+        )
         await self.active_page.get_by_placeholder("Password").click()
-        await self.active_page.get_by_placeholder("Password").fill(self.credentials.user_password)
+        await self.active_page.get_by_placeholder("Password").fill(
+            self.credentials.user_password
+        )
         await self.active_page.get_by_role("button", name="Log in").click()
 
         # Handle 2FA
@@ -71,15 +85,18 @@ class FourCyteSession(Session):
 
         # Fill combined name field (surname + first name)
         await self.active_page.get_by_placeholder("Surname [space] First name").fill(
-            f'{self.patient.family_name} {self.patient.given_name}'
+            f"{self.patient.family_name} {self.patient.given_name}"
         )
-        
+
         # Fill DOB
         await self.active_page.get_by_placeholder("Birth Date (Required)").click()
-        await self.active_page.get_by_placeholder("Birth Date (Required)").fill(converted_dob)
-        
+        await self.active_page.get_by_placeholder("Birth Date (Required)").fill(
+            converted_dob
+        )
+
         # Initiate search
         await self.active_page.get_by_role("button", name="Search").click()
+
 
 async def FourCyte_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session

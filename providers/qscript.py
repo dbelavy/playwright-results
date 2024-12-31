@@ -1,20 +1,30 @@
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format
-from typing import Optional
 import asyncio
+from typing import Optional
+
+from playwright.async_api import Playwright, async_playwright
+
+from models import Credentials, PatientDetails, Session, SharedState
+from utils import convert_date_format
+
 
 class QScriptSession(Session):
     name = "QScript"  # Make name a class attribute
-    required_fields = ['family_name', 'given_name', 'dob']
+    required_fields = ["family_name", "given_name", "dob"]
     provider_group = "General"
     credentials_key = "QScript"
-    
-    def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
+
+    def __init__(
+        self,
+        credentials: Credentials,
+        patient: PatientDetails,
+        shared_state: SharedState,
+    ):
         super().__init__(credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['QScriptSession']:
+    def create(
+        cls, patient: PatientDetails, shared_state: SharedState
+    ) -> Optional["QScriptSession"]:
         """Create a new QScript session"""
         return super().create(patient, shared_state)
 
@@ -33,13 +43,17 @@ class QScriptSession(Session):
 
         # Username entry
         await self.page.get_by_placeholder("Enter username").click()
-        await self.page.get_by_placeholder("Enter username").fill(self.credentials.user_name)
+        await self.page.get_by_placeholder("Enter username").fill(
+            self.credentials.user_name
+        )
         await self.page.get_by_label("Next").click()
         await self.page.wait_for_load_state("networkidle")
 
         # Password entry
         await self.page.get_by_placeholder("Enter password").click()
-        await self.page.get_by_placeholder("Enter password").fill(self.credentials.user_password)
+        await self.page.get_by_placeholder("Enter password").fill(
+            self.credentials.user_password
+        )
         await self.page.wait_for_load_state("networkidle")
         await self.page.get_by_label("Log In").click()
 
@@ -64,18 +78,25 @@ class QScriptSession(Session):
             raise RuntimeError("Session not initialized")
 
         # Fill patient details
-        await self.page.locator("[data-test-id=\"patientSearchFirstName\"]").click()
-        await self.page.locator("[data-test-id=\"patientSearchFirstName\"]").fill(self.patient.given_name)
-        await self.page.locator("[data-test-id=\"patientSearchFirstName\"]").press("Tab")
-        await self.page.locator("[data-test-id=\"patientSearchSurname\"]").fill(self.patient.family_name)
-        await self.page.locator("[data-test-id=\"patientSearchSurname\"]").press("Tab")
+        await self.page.locator('[data-test-id="patientSearchFirstName"]').click()
+        await self.page.locator('[data-test-id="patientSearchFirstName"]').fill(
+            self.patient.given_name
+        )
+        await self.page.locator('[data-test-id="patientSearchFirstName"]').press("Tab")
+        await self.page.locator('[data-test-id="patientSearchSurname"]').fill(
+            self.patient.family_name
+        )
+        await self.page.locator('[data-test-id="patientSearchSurname"]').press("Tab")
 
         # Convert and fill DOB
         converted_dob = convert_date_format(self.patient.dob, "%d%m%Y", "%d/%m/%Y")
-        await self.page.locator("[data-test-id=\"dateOfBirth\"]").get_by_placeholder(" ").fill(converted_dob)
+        await self.page.locator('[data-test-id="dateOfBirth"]').get_by_placeholder(
+            " "
+        ).fill(converted_dob)
 
         # Initiate search
         await self.page.get_by_label("Search").click()
+
 
 async def QScript_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session

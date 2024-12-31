@@ -1,0 +1,33 @@
+GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+Copyright (C) 2023 Playwright Pathology Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+                     Additional Permissions
+
+This license explicitly allows you to:
+1. Use this software in your medical practice or business
+2. Modify the software for your own use
+3. Share your modifications with others
+
+However, if you modify and share this software:
+1. You must make your modifications open source
+2. You must share under the same GPLv3 license
+3. You must provide attribution to the original project
+
+For questions about licensing, contact the project maintainers.
+
+For the full GPLv3 license text, see: https://www.gnu.org/licenses/gpl-3.0.txt

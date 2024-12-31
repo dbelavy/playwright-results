@@ -221,9 +221,6 @@ class Session(ABC):
             except Exception as e:
                 print(f"Error during patient search: {e}")
             print("\n=== Search Complete ===")
-            
-            # Always wait for exit, even if search fails
-            print(f"{self.name} paused for interaction")
             await self.wait_for_exit()
         finally:
             await self.cleanup()
