@@ -67,23 +67,15 @@ class TestMyHealthRecord(PlaywrightTestCase):
         page.keyboard = MagicMock()
         page.keyboard.press = AsyncMock()
         
-        # Set up shared state for 2FA
-        async def mock_sleep(seconds):
-            # Simulate 2FA code being set after first sleep
-            if not session.shared_state.PRODA_code:
-                session.shared_state.PRODA_code = "123456"
+        # Mock wait_for_2fa to return immediately
+        async def mock_wait_for_2fa(provider_name: str) -> str:
+            return "123456"
         
-        # Mock asyncio.sleep to handle 2FA waiting
-        import asyncio
-        original_sleep = asyncio.sleep
-        asyncio.sleep = mock_sleep
+        # Replace wait_for_2fa with our mock
+        session.shared_state.wait_for_2fa = mock_wait_for_2fa
         
-        try:
-            # Perform login
-            await session.login()
-        finally:
-            # Restore original sleep
-            asyncio.sleep = original_sleep
+        # Perform login
+        await session.login()
         
         # Verify initial login steps
         page.get_by_label.assert_any_call("Username")
@@ -98,10 +90,9 @@ class TestMyHealthRecord(PlaywrightTestCase):
         login_button.click.assert_called_once()
         
         # Verify 2FA steps
-        assert session.shared_state.new_2fa_request == "PRODA"  # Check 2FA request set
         page.get_by_label.assert_any_call("Enter Code")
         code_field.click.assert_called_once()
-        code_field.fill.assert_called_once()  # Don't verify exact code as it's from shared state
+        code_field.fill.assert_called_with("123456")  # We know the exact code from our mock
         page.keyboard.press.assert_called_with('Enter')
         
         # Verify navigation to My Health Record

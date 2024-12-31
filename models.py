@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, Dict, Any, Callable, List
 import json
@@ -38,12 +38,48 @@ class Credentials:
 
 @dataclass
 class SharedState:
-    QScript_code: Optional[str] = None
-    PRODA_code: Optional[str] = None
-    FourCyte_code: Optional[str] = None  # Changed from 4Cyte_code to be a valid Python identifier
-    paused: bool = True
+    two_fa_codes: Dict[str, str] = field(default_factory=dict)
+    two_fa_events: Dict[str, asyncio.Event] = field(default_factory=dict)
+    new_2fa_request: Optional[str] = None  # Keep this for monitor compatibility
     exit: bool = False
     credentials_file: str = "credentials.json"
+
+    async def wait_for_2fa(self, provider_name: str) -> str:
+        """Wait for 2FA code with periodic reminders
+        Args:
+            provider_name: Name of provider requesting 2FA
+        Returns:
+            The 2FA code
+        Raises:
+            asyncio.CancelledError if exit signal received
+        """
+        if provider_name not in self.two_fa_events:
+            self.two_fa_events[provider_name] = asyncio.Event()
+        
+        print(f"\nWaiting for {provider_name} 2FA code...")
+        
+        while not self.two_fa_events[provider_name].is_set():
+            # Check for exit signal
+            if self.exit:
+                raise asyncio.CancelledError("Exit signal received")
+            
+            # Wait for either the event or 30 seconds
+            try:
+                await asyncio.wait_for(
+                    self.two_fa_events[provider_name].wait(),
+                    timeout=30
+                )
+            except asyncio.TimeoutError:
+                # No code yet, print reminder and keep waiting
+                print(f"Still waiting for {provider_name} 2FA code...")
+        
+        return self.two_fa_codes[provider_name]
+
+    def set_2fa_code(self, provider_name: str, code: str):
+        """Set 2FA code for any provider"""
+        self.two_fa_codes[provider_name] = code
+        if provider_name in self.two_fa_events:
+            self.two_fa_events[provider_name].set()
 
 @dataclass
 class PatientDetails:

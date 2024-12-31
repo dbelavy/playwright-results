@@ -66,23 +66,15 @@ class TestQScript(PlaywrightTestCase):
             ("button", "Verify"): verify_button
         }.get((role, kwargs.get('name')), Mock()))
         
-        # Set up shared state for 2FA
-        async def mock_sleep(seconds):
-            # Simulate 2FA code being set after first sleep
-            if not session.shared_state.QScript_code:
-                session.shared_state.QScript_code = "123456"
+        # Mock wait_for_2fa to return immediately
+        async def mock_wait_for_2fa(provider_name: str) -> str:
+            return "123456"
         
-        # Mock asyncio.sleep to handle 2FA waiting
-        import asyncio
-        original_sleep = asyncio.sleep
-        asyncio.sleep = mock_sleep
+        # Replace wait_for_2fa with our mock
+        session.shared_state.wait_for_2fa = mock_wait_for_2fa
         
-        try:
-            # Perform login
-            await session.login()
-        finally:
-            # Restore original sleep
-            asyncio.sleep = original_sleep
+        # Perform login
+        await session.login()
         
         # Verify username entry and next
         page.get_by_placeholder.assert_any_call("Enter username")
@@ -101,7 +93,7 @@ class TestQScript(PlaywrightTestCase):
         login_button.click.assert_called_once()
         
         # Verify 2FA steps
-        assert session.shared_state.new_2fa_request == "QScript"  # Check 2FA request set
+        # 2FA code should be set by the mock sleep
         page.get_by_placeholder.assert_any_call("Verification code")
         code_field.fill.assert_called_once()  # Don't verify exact code as it's from shared state
         

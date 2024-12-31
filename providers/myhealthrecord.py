@@ -54,18 +54,17 @@ class MyHealthRecordSession(Session):
         await self.page.wait_for_load_state("networkidle")
 
         # Handle 2FA
-        self.shared_state.new_2fa_request = "PRODA"
-        while not self.shared_state.PRODA_code:
-            await asyncio.sleep(1)  # Check for the 2FA code every second
-
-        two_fa_code = self.shared_state.PRODA_code
-        self.shared_state.PRODA_code = None
-
-        await self.page.get_by_label("Enter Code").click()
-        await self.page.get_by_label("Enter Code").fill(two_fa_code)
-        print('MyHR waiting for click the 2FA "Next" button')
-        await asyncio.sleep(0.2)
-        await self.page.keyboard.press("Enter")
+        try:
+            self.shared_state.new_2fa_request = "PRODA"  # Tell monitor we need a code
+            two_fa_code = await self.shared_state.wait_for_2fa("PRODA")
+            await self.page.get_by_label("Enter Code").click()
+            await self.page.get_by_label("Enter Code").fill(two_fa_code)
+            print('MyHR waiting for click the 2FA "Next" button')
+            await asyncio.sleep(0.2)  # Short delay for UI
+            await self.page.keyboard.press("Enter")
+        except asyncio.CancelledError:
+            print("MyHealthRecord login cancelled - exiting")
+            raise
 
         # Navigate to MyHealthRecord
         print("Clicking through to my health record")

@@ -58,15 +58,15 @@ class QScriptSession(Session):
         await self.page.get_by_label("Log In").click()
 
         # Handle 2FA
-        self.shared_state.new_2fa_request = "QScript"
-        while not self.shared_state.QScript_code:
-            await asyncio.sleep(1)
-
-        two_fa_code = self.shared_state.QScript_code
-        self.shared_state.QScript_code = None
-        await self.page.get_by_placeholder("Verification code").fill(two_fa_code)
-        await self.page.get_by_role("button", name="Verify").click()
-        await self.page.wait_for_load_state("networkidle")
+        try:
+            self.shared_state.new_2fa_request = "QScript"  # Tell monitor we need a code
+            two_fa_code = await self.shared_state.wait_for_2fa("QScript")
+            await self.page.get_by_placeholder("Verification code").fill(two_fa_code)
+            await self.page.get_by_role("button", name="Verify").click()
+            await self.page.wait_for_load_state("networkidle")
+        except asyncio.CancelledError:
+            print("QScript login cancelled - exiting")
+            raise
 
         # Handle PIN
         await self.page.get_by_placeholder("Enter PIN").fill(self.credentials.PIN)

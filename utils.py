@@ -23,8 +23,8 @@ class ClipboardTwoFactorMonitor:
         self.waiting_providers: Set[str] = set()
         self.last_clipboard = ""
         self.patterns = {
-            r"Use verification code (\d{6}) for QScript authentication": ("QScript", "QScript_code"),
-            r"Your verification code is (\d{6}) for Provider Digital Access": ("PRODA", "PRODA_code")
+            r"Use verification code (\d{6}) for QScript authentication": "QScript",
+            r"Your verification code is (\d{6}) for Provider Digital Access": "PRODA"
         }
     
     def add_provider(self, provider: str):
@@ -53,12 +53,12 @@ class ClipboardTwoFactorMonitor:
                 self.last_clipboard = current_clipboard
                 
                 # Check clipboard content against patterns for waiting providers
-                for pattern, (provider, attr) in self.patterns.items():
+                for pattern, provider in self.patterns.items():
                     if provider in self.waiting_providers:
                         match = re.search(pattern, current_clipboard)
                         if match:
                             code = match.group(1)  # Get the captured 6-digit code
-                            setattr(self.shared_state, attr, code)
+                            self.shared_state.set_2fa_code(provider, code)
                             print(f"\n✓ 2FA code automatically detected for {provider}: {code}")
                             self.remove_provider(provider)
                             
@@ -88,13 +88,13 @@ async def process_inputs(input_queue, shared_state: SharedState):
             if match:
                 menu_num, code = match.groups()
                 provider_map = {
-                    "1": ("PRODA", "PRODA_code"),
-                    "2": ("QScript", "QScript_code")
+                    "1": "PRODA",
+                    "2": "QScript"
                 }
                 if menu_num in provider_map:
-                    provider, attr = provider_map[menu_num]
+                    provider = provider_map[menu_num]
                     if provider in monitor.waiting_providers:
-                        setattr(shared_state, attr, code)
+                        shared_state.set_2fa_code(provider, code)
                         print(f"\n✓ 2FA code manually entered for {provider}")
                         monitor.remove_provider(provider)
                         
