@@ -1,19 +1,26 @@
 from playwright.async_api import Playwright, async_playwright, Page
 from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format, generate_2fa_code
+from typing import Optional
 
 # Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
 PROVIDER_GROUP = "Pathology"
 CREDENTIALS_KEY = "MaterPath"  # Matches the key in credentials.json
 
-class MaterPathSession(Session):
+class MaterPathologySession(Session):
+    name = "Mater Pathology"  # Make name a class attribute
+    
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__("MaterPath", credentials, patient, shared_state)
+        super().__init__(self.name, credentials, patient, shared_state)
+
+    @classmethod
+    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['MaterPathologySession']:
+        """Create a new Mater Pathology session"""
+        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
-        print(f"Starting {self.name} process")
         self.browser = await playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
         self.page = await self.context.new_page()
@@ -109,14 +116,10 @@ class MaterPathSession(Session):
 
         await self.page.get_by_role("button", name="Search").click()
 
-async def run_materpath_process(patient: PatientDetails, shared_state: SharedState):
-    # Load credentials
-    credentials = load_credentials(shared_state, "MaterPath")
-    if not credentials:
-        print("Failed to load MaterPath credentials")
-        return
-
+async def MaterPathology_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session
-    session = MaterPathSession(credentials, patient, shared_state)
+    session = MaterPathologySession.create(patient, shared_state)
+    if not session:
+        return
     async with async_playwright() as playwright:
         await session.run(playwright)

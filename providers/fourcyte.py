@@ -1,20 +1,27 @@
+from playwright.async_api import Playwright, async_playwright, Page
+from models import PatientDetails, SharedState, Credentials, Session
+from utils import load_credentials, convert_date_format, generate_2fa_code
+from typing import Optional
+
 # Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
 PROVIDER_GROUP = "Pathology"
 CREDENTIALS_KEY = "4cyte"  # Matches the key in credentials.json
 
-from playwright.async_api import Playwright, async_playwright, Page
-from models import PatientDetails, SharedState, Credentials, Session
-from utils import load_credentials, convert_date_format, generate_2fa_code
-
 class FourCyteSession(Session):
+    name = "4Cyte"  # Make name a class attribute
+    
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__("4cyte", credentials, patient, shared_state)
+        super().__init__(self.name, credentials, patient, shared_state)
         self.active_page: Page | None = None  # For handling popup window
+
+    @classmethod
+    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['FourCyteSession']:
+        """Create a new FourCyte session"""
+        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
-        print(f"Starting {self.name} process")
         self.browser = await playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
         self.page = await self.context.new_page()
@@ -76,14 +83,10 @@ class FourCyteSession(Session):
         # Initiate search
         await self.active_page.get_by_role("button", name="Search").click()
 
-async def run_fourcyte_process(patient: PatientDetails, shared_state: SharedState):
-    # Load credentials
-    credentials = load_credentials(shared_state, "4cyte")
-    if not credentials:
-        print("Failed to load 4cyte credentials")
-        return
-
+async def FourCyte_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session
-    session = FourCyteSession(credentials, patient, shared_state)
+    session = FourCyteSession.create(patient, shared_state)
+    if not session:
+        return
     async with async_playwright() as playwright:
         await session.run(playwright)

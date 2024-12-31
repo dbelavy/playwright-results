@@ -9,15 +9,15 @@ REQUIRED_FIELDS = []  # No patient details required
 PROVIDER_GROUP = "Other"
 CREDENTIALS_KEY = "Meditrust"  # Matches the key in credentials.json
 
-class MediTrustSession(Session):
-    name = "MediTrust"  # Make name a class attribute
+class MeditrustSession(Session):
+    name = "Meditrust"  # Make name a class attribute
     
     def __init__(self, credentials: Credentials, patient: Optional[PatientDetails], shared_state: SharedState):
         super().__init__(self.name, credentials, patient, shared_state)
 
     @classmethod
-    def create(cls, patient: Optional[PatientDetails], shared_state: SharedState) -> Optional['MediTrustSession']:
-        """Create a new MediTrust session"""
+    def create(cls, patient: Optional[PatientDetails], shared_state: SharedState) -> Optional['MeditrustSession']:
+        """Create a new Meditrust session"""
         return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
@@ -47,12 +47,12 @@ class MediTrustSession(Session):
         await self.page.get_by_role("button", name="Submit").click()
 
     async def search_patient(self) -> None:
-        """No patient search needed for MediTrust"""
+        """No patient search needed for Meditrust"""
         pass
 
-async def MediTrust_process(patient: Optional[PatientDetails], shared_state: SharedState):
+async def meditrust_process(patient: Optional[PatientDetails], shared_state: SharedState):
     # Create and run session
-    session = MediTrustSession.create(patient, shared_state)
+    session = MeditrustSession.create(patient, shared_state)
     if not session:
         return
     async with async_playwright() as playwright:

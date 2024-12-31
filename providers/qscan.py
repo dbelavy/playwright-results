@@ -1,6 +1,7 @@
 from playwright.async_api import Playwright, async_playwright, Page
 from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format
+from typing import Optional
 import asyncio
 
 # Define provider metadata at module level
@@ -9,12 +10,18 @@ PROVIDER_GROUP = "Radiology"
 CREDENTIALS_KEY = "QScan"  # Matches the key in credentials.json
 
 class QScanSession(Session):
+    name = "QScan"  # Make name a class attribute
+    
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__("QScan", credentials, patient, shared_state)
+        super().__init__(self.name, credentials, patient, shared_state)
+
+    @classmethod
+    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['QScanSession']:
+        """Create a new QScan session"""
+        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
-        print(f"\n=== Starting {self.name} Process ===")
         # print(f"Launching browser and navigating to QScan...")
         self.browser = await playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
@@ -28,7 +35,6 @@ class QScanSession(Session):
         if not self.page:
             raise RuntimeError("Session not initialized")
 
-        print("\n=== QScan Login ===")
         # print(f"Attempting login with username: {self.credentials.user_name}")
         
         # Username entry
@@ -60,7 +66,6 @@ class QScanSession(Session):
         if not self.page:
             raise RuntimeError("Session not initialized")
 
-        print("\n=== QScan Patient Search ===")
         # print(f"Patient Details:")
         # print(f"- Family Name: {self.patient.family_name}")
         # print(f"- Given Name: {self.patient.given_name}")
@@ -125,17 +130,12 @@ class QScanSession(Session):
             except Exception:
                 print("QScan patient results may be available - pausing for interaction")
         
-        print("\n=== Search Complete ===")
 
-async def run_QScan_process(patient: PatientDetails, shared_state: SharedState):
+async def QScan_process(patient: PatientDetails, shared_state: SharedState):
     """Main entry point for QScan provider"""
-    print("\nInitializing QScan process...")
-    credentials = load_credentials(shared_state, "QScan")
-    if not credentials:
-        print("❌ Failed to load QScan credentials")
-        return
-
     # Create and run session
-    session = QScanSession(credentials, patient, shared_state)
+    session = QScanSession.create(patient, shared_state)
+    if not session:
+        return
     async with async_playwright() as playwright:
         await session.run(playwright)

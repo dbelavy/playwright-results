@@ -1,6 +1,7 @@
 from playwright.async_api import Playwright, async_playwright, Page
 from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format
+from typing import Optional
 import asyncio
 
 # Define provider metadata at module level
@@ -9,12 +10,18 @@ PROVIDER_GROUP = "Radiology"
 CREDENTIALS_KEY = "QXR"  # Matches the key in credentials.json
 
 class QXRSession(Session):
+    name = "QXR"  # Make name a class attribute
+    
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__("QXR", credentials, patient, shared_state)
+        super().__init__(self.name, credentials, patient, shared_state)
+
+    @classmethod
+    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['QXRSession']:
+        """Create a new QXR session"""
+        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
-        print(f"\n=== Starting {self.name} Process ===")
         # print(f"Launching browser and navigating to QXR...")
         self.browser = await playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
@@ -28,7 +35,6 @@ class QXRSession(Session):
         if not self.page:
             raise RuntimeError("Session not initialized")
 
-        print("\n=== QXR Login ===")
         # print(f"Attempting login with username: {self.credentials.user_name}")
         
         # Username entry
@@ -52,7 +58,6 @@ class QXRSession(Session):
         if not self.page:
             raise RuntimeError("Session not initialized")
 
-        print("\n=== QXR Patient Search ===")
         # print(f"Patient Details:")
         # print(f"- Family Name: {self.patient.family_name}")
         # print(f"- Given Name: {self.patient.given_name}")
@@ -128,18 +133,12 @@ class QXRSession(Session):
             await self.page.screenshot(path="qxr_search_error.png")
             raise
         
-        print("\n=== Search Complete ===")
 
-async def run_QXR_process(patient: PatientDetails, shared_state: SharedState):
+async def QXR_process(patient: PatientDetails, shared_state: SharedState):
     """Main entry point for QXR provider"""
-    # Load credentials
-    print("\nInitializing QXR process...")
-    credentials = load_credentials(shared_state, "QXR")
-    if not credentials:
-        print("❌ Failed to load QXR credentials")
-        return
-
     # Create and run session
-    session = QXRSession(credentials, patient, shared_state)
+    session = QXRSession.create(patient, shared_state)
+    if not session:
+        return
     async with async_playwright() as playwright:
         await session.run(playwright)

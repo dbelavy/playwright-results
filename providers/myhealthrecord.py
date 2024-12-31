@@ -1,6 +1,7 @@
 from playwright.async_api import Playwright, async_playwright, Page
 from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format
+from typing import Optional
 import asyncio
 
 # Define provider metadata at module level
@@ -9,12 +10,18 @@ PROVIDER_GROUP = "General"
 CREDENTIALS_KEY = "PRODA"  # Matches the key in credentials.json
 
 class MyHealthRecordSession(Session):
+    name = "My Health Record"  # Make name a class attribute
+    
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
-        super().__init__("MyHealthRecord", credentials, patient, shared_state)
+        super().__init__(self.name, credentials, patient, shared_state)
+
+    @classmethod
+    def create(cls, patient: PatientDetails, shared_state: SharedState) -> Optional['MyHealthRecordSession']:
+        """Create a new My Health Record session"""
+        return super().create(cls.name, CREDENTIALS_KEY, patient, shared_state)
 
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
-        print(f"Starting {self.name} process")
         self.browser = await playwright.chromium.launch(headless=False)
         self.context = await self.browser.new_context()
         self.page = await self.context.new_page()
@@ -98,14 +105,10 @@ class MyHealthRecordSession(Session):
         # Initiate search
         await self.page.get_by_role("button", name="Search").click()
 
-async def run_myHealthRecord_process(patient: PatientDetails, shared_state: SharedState):
-    # Load credentials
-    credentials = load_credentials(shared_state, "PRODA")
-    if not credentials:
-        print("Failed to load PRODA credentials")
-        return
-
+async def MyHealthRecord_process(patient: PatientDetails, shared_state: SharedState):
     # Create and run session
-    session = MyHealthRecordSession(credentials, patient, shared_state)
+    session = MyHealthRecordSession.create(patient, shared_state)
+    if not session:
+        return
     async with async_playwright() as playwright:
         await session.run(playwright)

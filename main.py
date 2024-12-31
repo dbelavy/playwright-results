@@ -57,11 +57,19 @@ def load_providers():
             module_name = f'providers.{file_path.stem}'
             module = importlib.import_module(module_name)
             
-            # Find the run function
+            # Find the process function
             for name, func in inspect.getmembers(module, inspect.isfunction):
-                if name.startswith('run_') and name.endswith('_process'):
-                    # Convert function name to provider name
-                    provider_name = name[4:-8].replace('_', ' ').title()
+                if name.endswith('_process'):
+                    # Get provider name from the session class
+                    module_name = f'providers.{file_path.stem}'
+                    module = importlib.import_module(module_name)
+                    session_class = next(
+                        (obj for _, obj in inspect.getmembers(module, inspect.isclass) 
+                         if obj.__name__.endswith('Session')), 
+                        None
+                    )
+                    if session_class:
+                        provider_name = session_class.name
                     
                     # Check if provider has valid credentials
                     creds_key = getattr(module, 'CREDENTIALS_KEY', provider_name.replace(' ', ''))

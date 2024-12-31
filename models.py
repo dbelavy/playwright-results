@@ -143,6 +143,16 @@ class Session(ABC):
         self.context: BrowserContext | None = None
         self.page: Page | None = None
 
+    @classmethod
+    def create(cls, name: str, credentials_key: str, patient: PatientDetails, shared_state: SharedState) -> Optional['Session']:
+        """Create a new session with loaded credentials"""
+        from utils import load_credentials  # Import here to avoid circular dependency
+        credentials = load_credentials(shared_state, credentials_key)
+        if not credentials:
+            print(f"Failed to load {credentials_key} credentials")
+            return None
+        return cls(credentials, patient, shared_state)
+
     @abstractmethod
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
@@ -175,13 +185,21 @@ class Session(ABC):
     async def run(self, playwright: Playwright) -> None:
         """Run the complete session"""
         try:
+            print(f"\n=== Starting {self.name} Process ===")
             await self.initialize(playwright)
+            
+            print(f"\n=== {self.name} Login ===")
             await self.login()
+            
+            print(f"\n=== {self.name} Patient Search ===")
             try:
                 await self.search_patient()
             except Exception as e:
                 print(f"Error during patient search: {e}")
+            print("\n=== Search Complete ===")
+            
             # Always wait for exit, even if search fails
+            print(f"{self.name} paused for interaction")
             await self.wait_for_exit()
         finally:
             await self.cleanup()
