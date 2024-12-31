@@ -17,16 +17,13 @@ This application automates the process of accessing multiple medical systems inc
 
 - Python 3.12.4
 - pip (Python package installer)
-- A virtual environment tool (I used venv)
+- A virtual environment tool (venv recommended)
 
 ## Installation
 
-## Prerequisites
+### macOS / Linux Installation
 
-- Python 3.12.4
-- pip (Python package installer)
-
-## Installation
+The install.sh and start.sh scripts handle all setup automatically on macOS and Linux:
 
 1. Clone the repository:
 ```bash
@@ -34,46 +31,66 @@ git clone git@bitbucket.org:dbelavy/playwrightpathology.git
 cd PlaywrightPathology
 ```
 
-2. Create and activate a virtual environment:
+2. If using conda, deactivate it first:
 ```bash
-# Using venv
-python3.12 -m venv venv
-source venv/bin/activate  # On Unix/macOS
-# OR
-venv\Scripts\activate     # On Windows
+conda deactivate
 ```
-If using conda and need to deactivate
+
+3. Run the install script:
+```bash
+chmod +x install.sh
+./install.sh
 ```
+
+4. Start the application:
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+### Windows Installation
+
+Windows users need to perform the installation steps manually:
+
+1. Clone the repository:
+```cmd
+git clone git@bitbucket.org:dbelavy/playwrightpathology.git
+cd PlaywrightPathology
+```
+
+2. Create and activate a virtual environment:
+```cmd
+python -m venv venv
+venv\Scripts\activate
+```
+
+If using conda, deactivate it first:
+```cmd
 conda deactivate
 ```
 
 3. Install required packages:
-```bash
+```cmd
 pip install aioconsole pynput playwright pyotp
 ```
 
-Not sure if this is necessary but I had browser problems so download playwright browsers into the venv and use them there.
-```bash
-export PLAYWRIGHT_BROWSERS_PATH=0
-playwright install```
-
 4. Install Playwright browsers:
-
-```bash
+```cmd
 playwright install
+python -m playwright install-deps
 ```
 
-Sometimes you need to be more explicit
-```
-python -m playwright install
-python -m playwright install-deps
+5. Start the application:
+```cmd
+python main.py
 ```
 
 ## Configuration
 
 1. Create a credentials file by copying the template:
 ```bash
-cp rename_to_credentials.json credentials.json
+cp rename_to_credentials.json credentials.json  # On macOS/Linux
+copy rename_to_credentials.json credentials.json  # On Windows
 ```
 
 2. Edit `credentials.json` with your credentials for each provider:
@@ -101,20 +118,11 @@ Note: Make sure your `credentials.json` is listed in `.gitignore` to prevent acc
 
 1. Run the main application:
 ```bash
-python main.py
+./start.sh  # On macOS/Linux
+python main.py  # On Windows
 ```
 
-2. Select tasks to run when prompted:
-```
-1: run_medway_process
-2: run_SNP_process
-3: run_QScript_process
-4: run_QGov_Viewer_process
-5: run_myHealthRecord_process
-6: run_mater_path_process
-7: run_fourcyte_process
-```
-Enter task numbers separated by commas (e.g., "1,3,6")
+2. Select providers from the categorized list when prompted. Providers are grouped by type (e.g., Pathology, Radiology, General).
 
 3. Enter patient details when prompted:
 - Family Name
@@ -123,32 +131,50 @@ Enter task numbers separated by commas (e.g., "1,3,6")
 - Medicare Number (if required)
 - Sex (M, F, or I) (if required)
 
-4. Input Commands during execution:
-- Enter 2FA codes when prompted:
-  - Format: `Q######` for QScript (manual entry required)
-  - Format: `P######` for PRODA
-  - Format: `F######` for 4Cyte (now automated with pyotp - no manual entry needed)
+4. Handling 2FA codes:
+- For providers requiring 2FA (like QScript, PRODA):
+  1. When you receive the 2FA code (SMS/email)
+  2. Copy the code to your clipboard
+  3. The application will automatically detect and use the code
+  4. No need to manually type the code
+- Note: 4Cyte uses automated TOTP authentication, no manual code needed
 
-5. Type 'x' to quit the application
+5. Type 'x' to quit at any menu, or press Ctrl+C to force quit
 
-### Command Line Arguments
-
-You can also run the application with command-line arguments to skip manual input:
-
-```bash
-python main.py --family_name "Smith" --given_name "John" --dob "01011990" --medicare_number "12345" --sex "M"
-```
-
-Available arguments:
-- `--family_name`: Patient's family name
-- `--given_name`: Patient's given name
-- `--dob`: Date of birth in DDMMYYYY format
-- `--medicare_number`: Medicare number
-- `--sex`: Sex (M, F, or I)
-
-The application will display a command with these arguments at the end of execution for easy re-running with the same patient details.
 
 ## Provider Information
+
+Call for help: these providers are the ones that I use. Contact me if you wish to collaborate in adding providers.
+
+### IMed
+Authentication:
+- Location selection by postcode and suburb
+- Username/password login in popup window
+- No 2FA required
+Required fields: family name, given name, DOB
+
+### Mater Legacy
+Authentication:
+- Simple username/password login
+- No 2FA required
+- Direct access to patient search
+Required fields: family name, given name, DOB
+
+### Mater Path
+Authentication:
+- Multi-step login process:
+  1. External practitioner selection
+  2. Username entry, then password on separate page
+  3. Automated TOTP 2FA (using secret key configured in credentials)
+- Handles alternative authentication paths if needed
+Required fields: family name, given name, DOB
+
+### Meditrust
+Authentication:
+- Username/password login
+- Automated TOTP 2FA (using secret key configured in credentials)
+- No patient search functionality
+Required fields: none (system access only)
 
 ### Mater Pathology
 - Automated login and patient search
@@ -156,11 +182,11 @@ The application will display a command with these arguments at the end of execut
 - Required fields: family name, given name, DOB
 
 ### 4cyte
-- Automated 2FA authentication using pyotp
-- Requires username, password, and TOTP secret key
-- TOTP secret key is obtained when first setting up 2FA with 4cyte
-- Required fields: family name, given name, DOB
-- Note: Manual 2FA code entry is no longer needed as it's handled automatically by pyotp
+Authentication:
+- Username/password login in popup window
+- Automated TOTP 2FA (using secret key configured in credentials)
+- Break glass access required for patient records
+Required fields: family name, given name, DOB
 
 ### QScript
 - Multi-step authentication process:
@@ -172,45 +198,72 @@ The application will display a command with these arguments at the end of execut
 - Known limitation: PIN system is under development
 
 ### Medway
-- Basic authentication
-- Requires username and password
-- Required fields: family name, given name, DOB
+Authentication:
+- Simple username/password login
+- No 2FA required
+- Optional Medicare number support
+Required fields: family name, given name, DOB
 
 ### MyHealth Record (PRODA)
+Authentication:
 - Multi-step PRODA authentication:
   1. Username/password login
-  2. Manual 2FA code entry (enter code starting with 'P')
-  3. Provider selection using PRODA_full_name
-- Requires username, password, and PRODA_full_name in credentials.json
-- PRODA_full_name must match exactly as it appears when you log in to PRODA
-- Required fields: family name, DOB, medicare number, sex
-- Supports gender options: Male, Female, Intersex, Not Stated
+  2. SMS-based 2FA (automatically detected from clipboard)
+  3. Provider selection using PRODA_full_name from credentials
+- Requires exact PRODA_full_name match from login screen
+- Includes pause between pages to prevent timing issues
+Patient Search:
 - Medicare number must include IRN (Individual Reference Number)
+- Supports all gender options: Male, Female, Intersex, Not Stated
+Required fields: family name, DOB, medicare number, sex
 
+### QScan
+Authentication:
+- Username/password login
+- Handles automatic redirection if password change required
+- Break glass access with privacy acknowledgment
+- Detailed patient matching system with confirmation
+Required fields: family name, given name, DOB
 
+### QXR
+Authentication:
+- Username/password login
+- Unique search interface with DOB popup handling
+- Error recovery with screenshots for troubleshooting
+- Robust timing controls for reliable operation
+Required fields: family name, given name, DOB
 
 ### SNP Sonic
-- Basic authentication
-- Requires username and password
-- Required fields: family name, given name, DOB
+Authentication:
+- Username/password login
+- Business selection (automatically set to "SNP")
+- Dedicated search page navigation
+Required fields: family name, given name, DOB
 
 ### The Viewer (QGov)
-- QGov login integration
-- Requires username and password
-- Required fields: family name, DOB, medicare number, sex
+Authentication:
+- QGov email/password login with explicit wait states
+- Multi-page navigation with policy redirect
+- Popup window handling with timeout protection
+Patient Search:
+- Automatic gender code conversion (M→1, F→2, I→3)
+- Medicare number validation
+Required fields: family name, DOB, medicare number, sex
 
 ## Troubleshooting virtual environment
 
-- I use venv which, on my machine, is shown with a (venv) at the start of the command line. 
-
-If I encounter the "(base)" conda environment and can't activate venv:
+### macOS / Linux
+If you see "(base)" conda environment and can't activate venv:
 ```bash
 conda deactivate
+source venv/bin/activate
 ```
 
-Then activate your Python virtual environment:
-```bash
-source venv/bin/activate
+### Windows
+If you see "(base)" conda environment and can't activate venv:
+```cmd
+conda deactivate
+venv\Scripts\activate
 ```
 
 ## Security Notes
@@ -218,13 +271,12 @@ source venv/bin/activate
 ### Credentials Storage
 - Credentials are stored in a local JSON file for easy user editing
 - Recommended security measures:
-  1. Store credentials.json outside the project directory (e.g., in your home directory)
-  2. Set file permissions to 600 (owner read/write only):
+  1. Set file permissions to 600 (owner read/write only) on macOS/Linux:
      ```bash
      chmod 600 credentials.json
      ```
-  3. Never commit credentials.json to version control (keep in .gitignore)
-  4. Keep credentials.json.example in the repo as a template
+  2. Never commit credentials.json to version control (keep in .gitignore)
+  4. Keep rename_to_credentials.json in the repo as a template
 
 ### General Security
 - No credential information is transmitted to external servers except for legitimate login purposes
