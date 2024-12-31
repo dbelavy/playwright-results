@@ -6,6 +6,7 @@ import asyncio
 # Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
 PROVIDER_GROUP = "Radiology"
+CREDENTIALS_KEY = "QXR"  # Matches the key in credentials.json
 
 class QXRSession(Session):
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):

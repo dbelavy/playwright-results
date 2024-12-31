@@ -1,6 +1,7 @@
 # Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
 PROVIDER_GROUP = "Pathology"
+CREDENTIALS_KEY = "4cyte"  # Matches the key in credentials.json
 
 from playwright.async_api import Playwright, async_playwright, Page
 from models import PatientDetails, SharedState, Credentials, Session

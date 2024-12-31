@@ -7,6 +7,7 @@ import asyncio
 # Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'dob', 'medicare_number', 'sex']
 PROVIDER_GROUP = "General"
+CREDENTIALS_KEY = "QGov"  # Matches the key in credentials.json
 
 class ViewerSession(Session):
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):

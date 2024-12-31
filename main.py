@@ -10,6 +10,18 @@ import importlib
 import inspect
 from pathlib import Path
 
+# ANSI color codes
+class Colors:
+    RED = '\033[91m'        # Bright Red
+    GREEN = '\033[92m'      # Bright Green
+    YELLOW = '\033[93m'     # Bright Yellow
+    BLUE = '\033[94m'       # Bright Blue
+    RESET = '\033[0m'       # Reset to default color
+
+def print_error(message):
+    """Print an error message in bright red"""
+    print(f"\n{Colors.RED}{message}{Colors.RESET}")
+
 from models import PatientDetails, SharedState
 from datetime import datetime
 from playwright.async_api import async_playwright
@@ -17,10 +29,23 @@ from pynput import keyboard
 from aioconsole import ainput
 from utils import input_thread, process_inputs
 
+def load_credentials():
+    """Load credentials from credentials.json"""
+    try:
+        with open('credentials.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print_error("❌ credentials.json not found. Please copy rename_to_credentials.json to credentials.json and configure it.")
+        return {}
+    except json.JSONDecodeError:
+        print_error("❌ Error parsing credentials.json. Please check the file format.")
+        return {}
+
 def load_providers():
     """Dynamically load all provider modules and their run functions"""
     providers = {}
     providers_dir = Path(__file__).parent / 'providers'
+    credentials = load_credentials()
     
     # Skip __pycache__ and __init__.py
     for file_path in providers_dir.glob('*.py'):
@@ -37,10 +62,18 @@ def load_providers():
                 if name.startswith('run_') and name.endswith('_process'):
                     # Convert function name to provider name
                     provider_name = name[4:-8].replace('_', ' ').title()
-                    # Get required fields and group from module
-                    required_fields = getattr(module, 'REQUIRED_FIELDS', [])
-                    provider_group = getattr(module, 'PROVIDER_GROUP', 'Other')
-                    providers[provider_name] = (func, required_fields, provider_group)
+                    
+                    # Check if provider has valid credentials
+                    creds_key = getattr(module, 'CREDENTIALS_KEY', provider_name.replace(' ', ''))
+                    if (creds_key in credentials and 
+                        isinstance(credentials[creds_key], dict) and
+                        'user_name' in credentials[creds_key] and
+                        credentials[creds_key]['user_name'] != 'your_username'):
+                        
+                        # Get required fields and group from module
+                        required_fields = getattr(module, 'REQUIRED_FIELDS', [])
+                        provider_group = getattr(module, 'PROVIDER_GROUP', 'Other')
+                        providers[provider_name] = (func, required_fields, provider_group)
                     break
                     
         except Exception as e:
@@ -89,29 +122,46 @@ async def run_tasks(patient_details=None, selected_providers=None):
         # Display grouped providers and get number mapping
         number_map = display_providers(providers)
         print("\nOther Options:")
-        print(f"  {len(number_map) + 1}. Quit")
+        print(f"  {len(number_map) + 1} or x: Quit")
         
         # Get provider selection
         selection = input("\nSelect providers (comma-separated names or numbers): ").strip()
         
         # Check for quit option or empty selection
-        if not selection or selection == str(len(number_map) + 1):
+        if not selection or selection == str(len(number_map) + 1) or selection.lower() == 'x':
             return None, None
         
-        # Handle both number and name input
-        selected_providers = []
-        for item in selection.split(','):
-            item = item.strip()
-            if item.isdigit():
-                # Convert number to provider name using number_map
-                num = int(item)
-                if num in number_map:
-                    selected_providers.append(number_map[num])
+        while True:
+            # Handle both number and name input
+            selected_providers = []
+            for item in selection.split(','):
+                item = item.strip()
+                if item.isdigit():
+                    # Convert number to provider name using number_map
+                    num = int(item)
+                    if num in number_map:
+                        selected_providers.append(number_map[num])
+                else:
+                    # Try to match provider name
+                    matches = [name for name in providers.keys() 
+                             if name.lower().startswith(item.lower())]
+                    selected_providers.extend(matches)
+            
+            # If no valid providers were selected, show error and try again
+            if not selected_providers:
+                print_error("❌ NO VALID PROVIDERS SELECTED. PLEASE TRY AGAIN.")
+                # Redisplay the providers
+                number_map = display_providers(providers)
+                print("\nOther Options:")
+                print(f"  {len(number_map) + 1} or x: Quit")
+                
+                selection = input("\nSelect providers (comma-separated names or numbers): ").strip()
+                
+                # Check for quit option or empty selection
+                if not selection or selection == str(len(number_map) + 1) or selection.lower() == 'x':
+                    return None, None
             else:
-                # Try to match provider name
-                matches = [name for name in providers.keys() 
-                         if name.lower().startswith(item.lower())]
-                selected_providers.extend(matches)
+                break
 
     # Get required fields from selected providers
     required_fields = set()
@@ -204,15 +254,15 @@ async def main():
             print("\nWhat would you like to do?")
             print("1: Use same patient (select new providers)")
             print("2: Enter new patient details")
-            print("3: Exit program")
-            choice = input("Enter choice (1-3): ").strip()
+            print("3 or x: Exit program")
+            choice = input("Enter choice (1-3 or x): ").strip()
             
             if choice == "2":
                 patient_details = None
                 selected_providers = None
             elif choice == "1":
                 selected_providers = None
-            elif choice == "3":
+            elif choice == "3" or choice.lower() == "x":
                     break
             else:
                 print("Invalid choice, please try again")

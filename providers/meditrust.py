@@ -6,6 +6,8 @@ import asyncio
 
 # Define provider requirements at module level
 REQUIRED_FIELDS = []  # No patient details required
+PROVIDER_GROUP = "Other"
+CREDENTIALS_KEY = "Meditrust"  # Matches the key in credentials.json
 
 class MeditrustSession(Session):
     def __init__(self, credentials: Credentials, patient: Optional[PatientDetails], shared_state: SharedState):

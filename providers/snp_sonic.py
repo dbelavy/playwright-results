@@ -5,6 +5,7 @@ from utils import load_credentials, convert_date_format
 # Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
 PROVIDER_GROUP = "Pathology"
+CREDENTIALS_KEY = "Sonic"  # Matches the key in credentials.json
 
 class SonicSession(Session):
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):
