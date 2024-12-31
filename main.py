@@ -37,9 +37,10 @@ def load_providers():
                 if name.startswith('run_') and name.endswith('_process'):
                     # Convert function name to provider name
                     provider_name = name[4:-8].replace('_', ' ').title()
-                    # Get required fields from module
+                    # Get required fields and group from module
                     required_fields = getattr(module, 'REQUIRED_FIELDS', [])
-                    providers[provider_name] = (func, required_fields)
+                    provider_group = getattr(module, 'PROVIDER_GROUP', 'Other')
+                    providers[provider_name] = (func, required_fields, provider_group)
                     break
                     
         except Exception as e:
@@ -47,29 +48,65 @@ def load_providers():
             
     return providers
 
+def display_providers(providers):
+    """Display providers grouped by category"""
+    # Group providers by their category
+    grouped = {}
+    for name, (_, _, group) in providers.items():
+        if group not in grouped:
+            grouped[group] = []
+        grouped[group].append(name)
+    
+    # Sort groups, but ensure 'Other' is last
+    groups = list(grouped.keys())
+    if 'Other' in groups:
+        groups.remove('Other')
+        groups = sorted(groups)
+        groups.append('Other')
+    else:
+        groups = sorted(groups)
+    
+    counter = 1
+    number_map = {}
+    
+    print("\nAvailable providers:")
+    for group in groups:
+        print(f"\n{group}:")
+        # Sort providers within each group
+        for name in sorted(grouped[group]):
+            print(f"  {counter}. {name}")
+            number_map[counter] = name
+            counter += 1
+    
+    return number_map
+
 async def run_tasks(patient_details=None, selected_providers=None):
     """Run the selected tasks with the given patient details."""
     # Load all available providers
     providers = load_providers()
     
     if selected_providers is None:
-        # Display available providers
-        print("\nAvailable providers:")
-        for i, name in enumerate(providers.keys(), 1):
-            print(f"{i}. {name}")
-            
+        # Display grouped providers and get number mapping
+        number_map = display_providers(providers)
+        print("\nOther Options:")
+        print(f"  {len(number_map) + 1}. Quit")
+        
         # Get provider selection
         selection = input("\nSelect providers (comma-separated names or numbers): ").strip()
+        
+        # Check for quit option or empty selection
+        if not selection or selection == str(len(number_map) + 1):
+            return None, None
         
         # Handle both number and name input
         selected_providers = []
         for item in selection.split(','):
             item = item.strip()
             if item.isdigit():
-                # Convert number to provider name
-                idx = int(item) - 1
-                if 0 <= idx < len(providers):
-                    selected_providers.append(list(providers.keys())[idx])
+                # Convert number to provider name using number_map
+                num = int(item)
+                if num in number_map:
+                    selected_providers.append(number_map[num])
             else:
                 # Try to match provider name
                 matches = [name for name in providers.keys() 
@@ -80,7 +117,7 @@ async def run_tasks(patient_details=None, selected_providers=None):
     required_fields = set()
     for provider in selected_providers:
         if provider in providers:
-            _, fields = providers[provider]
+            _, fields, _ = providers[provider]
             required_fields.update(fields)
 
     print(f'\nRequired fields are: {list(required_fields)}\n')
@@ -111,6 +148,10 @@ async def run_tasks(patient_details=None, selected_providers=None):
     if flags:
         print(f"If you want to view this patient again enter: python main.py {flags}")
 
+    # Only proceed with task setup if providers were selected
+    if not selected_providers:
+        return patient_details, selected_providers
+
     # Set up shared state and input handling
     input_queue = queue.Queue()
     shared_state = SharedState()
@@ -123,7 +164,7 @@ async def run_tasks(patient_details=None, selected_providers=None):
     tasks = []
     for provider in selected_providers:
         if provider in providers:
-            run_func, _ = providers[provider]
+            run_func, _, _ = providers[provider]
             task = asyncio.create_task(run_func(patient_details, shared_state))
             tasks.append(task)
             print(f'Starting {provider} process')
@@ -172,13 +213,16 @@ async def main():
             elif choice == "1":
                 selected_providers = None
             elif choice == "3":
-                print("Goodbye!")
-                break
+                    break
             else:
                 print("Invalid choice, please try again")
                 continue
                 
-        patient_details, selected_providers = await run_tasks(patient_details, selected_providers)
+        result = await run_tasks(patient_details, selected_providers)
+        if result is None or result == (None, None):
+            print("Goodbye!")
+            break
+        patient_details, selected_providers = result
 
 # Run the main function
 asyncio.run(main())

@@ -2,8 +2,9 @@ from playwright.async_api import Playwright, async_playwright, Page
 from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format, generate_2fa_code
 
-# Define provider requirements at module level
+# Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
+PROVIDER_GROUP = "Pathology"
 
 class MaterPathSession(Session):
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):

@@ -3,8 +3,9 @@ from models import PatientDetails, SharedState, Credentials, Session
 from utils import load_credentials, convert_date_format
 import asyncio
 
-# Define provider requirements at module level
+# Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'dob', 'medicare_number', 'sex']
+PROVIDER_GROUP = "General"
 
 class MyHealthRecordSession(Session):
     def __init__(self, credentials: Credentials, patient: PatientDetails, shared_state: SharedState):

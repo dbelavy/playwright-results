@@ -1,5 +1,6 @@
-# Define provider requirements at module level
+# Define provider metadata at module level
 REQUIRED_FIELDS = ['family_name', 'given_name', 'dob']
+PROVIDER_GROUP = "Pathology"
 
 from playwright.async_api import Playwright, async_playwright
 from models import PatientDetails, SharedState, Credentials, Session
