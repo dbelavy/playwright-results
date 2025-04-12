@@ -27,6 +27,7 @@ class ClipboardTwoFactorMonitor:
         self.patterns = {
             r"Use verification code (\d{6}) for QScript authentication": "QScript",
             r"Your verification code is (\d{6}) for Provider Digital Access": "PRODA",
+            r"Your one time code is: (\d{6})": "QGov",
         }
 
     def add_provider(self, provider: str):
@@ -38,7 +39,7 @@ class ClipboardTwoFactorMonitor:
 
         print(f"\nMonitoring clipboard for {provider} 2FA code...")
         print("Just copy the SMS message and the code will be automatically detected")
-        print("Or enter code manually: 1=PRODA, 2=QScript (e.g. 1123456)")
+        print("Or enter code manually: 1=PRODA, 2=QScript, 3=QGov (e.g. 1123456)")
         print("Enter 'x' to quit")
 
         if len(self.waiting_providers) > 1:

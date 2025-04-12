@@ -42,28 +42,46 @@ class QGovViewerSession(Session):
             raise RuntimeError("Session not initialized")
 
         # Wait for and click login link
-        await self.page.wait_for_selector('a:text("Log in")', state="visible")
+        #await self.page.wait_for_selector('a:text("Log in")', state="visible")
+        #await self.page.get_by_role("link", name="Log in").click()
         await self.page.get_by_role("link", name="Log in").click()
 
+
         # Wait for QGov login notification
-        await self.page.wait_for_selector('button[aria-label="Continue with QGov"]', state="visible")
-        await self.page.locator('button[aria-label="Continue with QGov"]').click()
-        
+        # await self.page.wait_for_selector('button[aria-label="Continue with QDI (formerly"]', state="visible")
+
+        # await self.page.locator('button[aria-label="Continue with QGov"]').click()
+        await self.page.get_by_label("Continue with QDI (formerly").click()
         # Wait for email field and fill credentials
-        await self.page.wait_for_selector(
-            'input[placeholder="Your email address"]', state="visible"
-        )
-        await self.page.get_by_placeholder("Your email address").fill(
-            self.credentials.user_name
-        )
+        # await self.page.wait_for_selector(  'input[placeholder="Your email address"]', state="visible" )
+        await self.page.get_by_label("Email address").click()
+        await self.page.get_by_label("Email address").fill(self.credentials.user_name)
+
+        #await self.page.get_by_placeholder("Your email address").fill(self.credentials.user_name   )
 
         # Wait for password field and fill
-        await self.page.wait_for_selector('input[type="password"]', state="visible")
-        await self.page.get_by_label("Password").fill(self.credentials.user_password)
+        # await self.page.wait_for_selector('input[type="password"]', state="visible")
+        await self.page.locator('[aria-label="Password"][type="password"]').click()
+        await self.page.locator('[aria-label="Password"][type="password"]').fill(self.credentials.user_password)
 
         # Click login and wait for navigation
-        await self.page.get_by_role("button", name="Log in").click()
-        await self.page.wait_for_load_state("domcontentloaded")
+        await self.page.get_by_role("button", name="Continue").click()
+        #await self.page.get_by_role("button", name="Log in").click()
+        #await self.page.wait_for_load_state("domcontentloaded")
+
+        # implement SMS listener
+        # Handle 2FA
+        try:
+            self.shared_state.new_2fa_request = "QGov"  # Tell monitor we need a code
+            two_fa_code = await self.shared_state.wait_for_2fa("QGov")
+            await self.page.get_by_label("Enter the 6-digit code").click()
+            await self.page.get_by_label("Enter the 6-digit code").fill(two_fa_code)
+            await self.page.get_by_role("button", name="Continue").click()
+            await self.page.wait_for_load_state("networkidle")
+        except asyncio.CancelledError:
+            print("QScript login cancelled - exiting")
+            raise
+
 
     async def search_patient(self) -> None:
         """Handle patient search"""
