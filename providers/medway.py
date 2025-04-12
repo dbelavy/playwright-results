@@ -1,5 +1,5 @@
 from typing import Optional
-
+import asyncio
 from playwright.async_api import Playwright, async_playwright
 
 from models import Credentials, PatientDetails, Session, SharedState
@@ -38,12 +38,23 @@ class MedwaySession(Session):
         """Handle login process"""
         if not self.page:
             raise RuntimeError("Session not initialized")
-
+        
+        await self.page.wait_for_load_state("networkidle")
+        await asyncio.sleep(1)
         await self.page.get_by_label("Username").click()
         await self.page.get_by_label("Username").fill(self.credentials.user_name)
         await self.page.get_by_label("Password").click()
         await self.page.get_by_label("Password").fill(self.credentials.user_password)
+        await self.page.get_by_label("Password").press("Enter")
+        await asyncio.sleep(2)
+        await self.page.get_by_label("Username").click()
+        await self.page.get_by_label("Username").fill(self.credentials.user_name)
+        await self.page.get_by_label("Password").click()
+        await self.page.get_by_label("Password").fill(self.credentials.user_password)
+        await asyncio.sleep(1)
+        # await self.page.get_by_label("Password").press("Enter")
         await self.page.get_by_role("button", name="Log in").click()
+
         await self.page.wait_for_load_state("networkidle")
 
     async def search_patient(self) -> None:

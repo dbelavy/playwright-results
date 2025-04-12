@@ -34,7 +34,8 @@ class FourCyteSession(Session):
         self.context = await self.browser.new_context()
         self.page = await self.context.new_page()
         self.active_page = self.page  # Start with main page as active
-        await self.page.goto("https://www.4cyte.com.au/clinicians")
+        # await self.page.goto("https://www.4cyte.com.au/clinicians")
+        await self.page.goto("https://4cyte.mocloud.com.au/rest/html/explorer_online/index.html#!/app")
 
     async def login(self) -> None:
         """Handle login process including 2FA and popup"""
@@ -42,13 +43,13 @@ class FourCyteSession(Session):
             raise RuntimeError("Session not initialized")
 
         # Click Web Results Portal
-        await self.page.get_by_role("link", name="Web Results Portal").click()
+        # await self.page.get_by_role("link", name="Web Results Portal").click()
 
         # Handle popup window
-        async with self.page.expect_popup() as page1_info:
-            await self.page.get_by_label("Access results portal").click()
-            popup = await page1_info.value
-            self.active_page = popup  # Update active page to popup
+        #async with self.page.expect_popup() as page1_info:
+        #    await self.page.get_by_label("Access results portal").click()
+        #    popup = await page1_info.value
+        #    self.active_page = popup  # Update active page to popup
 
         # Login in popup window
         await self.active_page.get_by_placeholder("Username").click()

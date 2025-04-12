@@ -1,4 +1,5 @@
 from typing import Optional
+import asyncio
 
 from playwright.async_api import Playwright, async_playwright
 
@@ -38,15 +39,18 @@ class MaterLegacySession(Session):
         """Handle login process"""
         if not self.page:
             raise RuntimeError("Session not initialized")
-
+        await self.page.wait_for_load_state("networkidle")
+        await asyncio.sleep(1)
         await self.page.locator('input[name="salamiloginlogin"]').click()
         await self.page.locator('input[name="salamiloginlogin"]').fill(
             self.credentials.user_name
         )
+        await asyncio.sleep(1)
         await self.page.locator('input[name="salamiloginpassword"]').click()
         await self.page.locator('input[name="salamiloginpassword"]').fill(
             self.credentials.user_password
         )
+        await asyncio.sleep(2)
         await self.page.get_by_role("button", name="Login").click()
         await self.page.wait_for_load_state("networkidle")
 

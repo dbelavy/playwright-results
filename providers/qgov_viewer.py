@@ -45,6 +45,10 @@ class QGovViewerSession(Session):
         await self.page.wait_for_selector('a:text("Log in")', state="visible")
         await self.page.get_by_role("link", name="Log in").click()
 
+        # Wait for QGov login notification
+        await self.page.wait_for_selector('button[aria-label="Continue with QGov"]', state="visible")
+        await self.page.locator('button[aria-label="Continue with QGov"]').click()
+        
         # Wait for email field and fill credentials
         await self.page.wait_for_selector(
             'input[placeholder="Your email address"]', state="visible"

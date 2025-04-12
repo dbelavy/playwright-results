@@ -1,4 +1,4 @@
-# Playwright Pathology
+# Playwright Results
 
 A Python-based automation tool for accessing various medical pathology and health record systems using Playwright.
 
@@ -27,8 +27,8 @@ The install.sh and start.sh scripts handle all setup automatically on macOS and 
 
 1. Clone the repository:
 ```bash
-git clone git@bitbucket.org:dbelavy/playwrightpathology.git
-cd PlaywrightPathology
+git clone git@bitbucket.org:dbelavy/playwright-results.git
+cd playwright-results
 ```
 
 2. If using conda, deactivate it first:
@@ -54,8 +54,8 @@ Windows users need to perform the installation steps manually:
 
 1. Clone the repository:
 ```cmd
-git clone git@bitbucket.org:dbelavy/playwrightpathology.git
-cd PlaywrightPathology
+git clone git@bitbucket.org:dbelavy/playwright-results.git
+cd playwright-results
 ```
 
 2. Create and activate a virtual environment:

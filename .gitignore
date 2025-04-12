@@ -9,3 +9,5 @@ env/
 providers/__pycache__/
 draft_scripts/
 node_modules/
+screen_shots_data/
+testing_screen_html_capture.py

@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
-
+from core import PageDataCollector
+from pathlib import Path
 from playwright.async_api import Browser, BrowserContext, Page, Playwright
 
 
@@ -243,6 +244,8 @@ class Session(ABC):
     @abstractmethod
     async def initialize(self, playwright: Playwright) -> None:
         """Initialize browser session"""
+        task = "initializing browser"
+
         pass
 
     @abstractmethod
@@ -271,9 +274,19 @@ class Session(ABC):
 
     async def run(self, playwright: Playwright) -> None:
         """Run the complete session"""
+        # Initialize collector for this session
+        collector = PageDataCollector(
+            output_dir=Path(f"screen_shots_data/{self.name.lower()}")
+        )
+        
         try:
             print(f"\n=== Starting {self.name} Process ===")
             await self.initialize(playwright)
+            # if self.page:  # Capture post-initialization state
+            #     await collector.capture_page_data(
+            #         self.page,
+            #         task="initialization"
+            #     )
 
             print(f"\n=== {self.name} Login ===")
             await self.login()
